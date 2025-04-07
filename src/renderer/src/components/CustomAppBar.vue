@@ -2,6 +2,10 @@
   <n-el class="flex justify-end overflow-hidden text-[var(--text-color)] bg-[var(--card-color)]">
     <div class="flex-1" style="app-region: drag"></div>
     <div>
+      <n-button quaternary @click="toggleDark()">
+        <i class="i-tabler-sun-filled" v-if="isDark"></i>
+        <i class="i-tabler-moon-filled" v-else></i>
+      </n-button>
       <n-button quaternary @click="minimize">
         <i class="i-tabler-minus"></i>
       </n-button>
@@ -17,6 +21,9 @@
 </template>
 
 <script setup lang="ts">
+import { useNaiveTheme } from '@/composables/useTheme'
+
+const { isDark, toggleDark } = useNaiveTheme()
 const { minimize, toggleMaximize, close, onMaximized, onUnmaximized } = window.electronAPI
 
 const isMaximized = ref(false)

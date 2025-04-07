@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { darkTheme } from 'naive-ui'
+import { useNaiveTheme } from '@/composables/useTheme'
+
+const { naiveTheme } = useNaiveTheme()
 </script>
 
 <template>
-  <n-config-provider :theme="darkTheme">
+  <n-config-provider :theme="naiveTheme">
     <n-message-provider>
       <n-dialog-provider>
         <n-notification-provider>

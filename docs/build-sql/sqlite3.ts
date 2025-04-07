@@ -7,7 +7,6 @@ const resolve = (p: string) => path.resolve(import.meta.dir, p)
 
 const db = new Database(resolve('poetry.sqlite'))
 db.exec('PRAGMA journal_mode = WAL;PRAGMA synchronous = NORMAL;')
-db.loadExtension('')
 
 const INIT_QUERY = await Bun.file(resolve('./sqlite-init.sql')).text()
 db.run(INIT_QUERY)
@@ -20,7 +19,7 @@ const getPyInitials = (text: string = '') => {
   return pinyin(text, {
     pattern: 'first',
     toneType: 'none',
-    type: 'string',
+    type: 'string'
   }).replace(/\s+/g, '')
 }
 
@@ -37,7 +36,7 @@ const allData: any[] = []
 const glob1 = new Glob('poet.*.[0-9]*.json')
 for await (const file of glob1.scan({
   cwd: resolve('../全唐诗'),
-  absolute: true,
+  absolute: true
 })) {
   const list = await Bun.file(file).json()
   for (const item of list) {
@@ -51,7 +50,7 @@ for await (const file of glob1.scan({
 const glob2 = new Glob('ci.*.[0-9]*.json')
 for await (const file of glob2.scan({
   cwd: resolve('../宋词'),
-  absolute: true,
+  absolute: true
 })) {
   const list = await Bun.file(file).json()
   for (const item of list) {

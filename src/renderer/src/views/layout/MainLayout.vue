@@ -1,0 +1,14 @@
+<template>
+  <n-el class="main-layout bg-[var(--card-color)]">
+    <custom-app-bar></custom-app-bar>
+    <router-view />
+  </n-el>
+</template>
+
+<script setup lang="ts"></script>
+
+<style lang="scss">
+.main-layout {
+  --at-apply: h-screen overflow-hidden grid grid-cols-1 grid-rows-[min-content_1fr];
+}
+</style>

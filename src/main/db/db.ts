@@ -1,0 +1,219 @@
+import Database from 'better-sqlite3'
+import { Category, Poetry, SearchOptions, SearchResult } from './types'
+import poetryDBPath from '../../../resources/poetry.sqlite?asset'
+
+class PoetryDB {
+  private db: Database.Database
+
+  constructor(dbPath: string = ':memory:') {
+    this.db = new Database(dbPath)
+    this.db.pragma('journal_mode = WAL')
+    this.initialize()
+  }
+
+  private initialize() {
+    // 启用外键约束
+    this.db.pragma('foreign_keys = ON')
+  }
+
+  // 关闭数据库连接
+  close(): void {
+    this.db.close()
+  }
+
+  // 获取所有分类
+  getAllCategories(): Category[] {
+    const stmt = this.db.prepare('SELECT * FROM categories ORDER BY name')
+    return stmt.all() as Category[]
+  }
+
+  // 根据ID获取分类
+  getCategoryById(id: number): Category | null {
+    const stmt = this.db.prepare('SELECT * FROM categories WHERE id = ?')
+    return (stmt.get(id) as Category) || null
+  }
+
+  // 获取诗词总数
+  getPoetryCount(options: SearchOptions = {}): number {
+    let query = 'SELECT COUNT(*) as count FROM poetry WHERE 1=1'
+    const params: any[] = []
+
+    if (options.categoryId) {
+      query += ' AND category_id = ?'
+      params.push(options.categoryId)
+    }
+
+    if (options.author) {
+      query += ' AND author = ?'
+      params.push(options.author)
+    }
+
+    if (options.rhythmic) {
+      query += ' AND rhythmic = ?'
+      params.push(options.rhythmic)
+    }
+
+    const stmt = this.db.prepare(query)
+    const result = stmt.get(...params) as { count: number }
+    return result.count
+  }
+
+  // 获取诗词列表
+  getPoetryList(options: SearchOptions = {}): Poetry[] {
+    let query = `
+      SELECT
+        p.*,
+        c.name as category_name
+      FROM poetry p
+      JOIN categories c ON p.category_id = c.id
+      WHERE 1=1
+    `
+    const params: any[] = []
+
+    if (options.categoryId) {
+      query += ' AND p.category_id = ?'
+      params.push(options.categoryId)
+    }
+
+    if (options.author) {
+      query += ' AND p.author = ?'
+      params.push(options.author)
+    }
+
+    if (options.rhythmic) {
+      query += ' AND p.rhythmic = ?'
+      params.push(options.rhythmic)
+    }
+
+    query += ' ORDER BY p.id DESC'
+
+    if (options.limit) {
+      query += ' LIMIT ?'
+      params.push(options.limit)
+    }
+
+    if (options.offset) {
+      query += ' OFFSET ?'
+      params.push(options.offset)
+    }
+
+    const stmt = this.db.prepare(query)
+    const results = stmt.all(...params) as any[]
+
+    // 解析JSON字段
+    return results.map((item) => ({
+      ...item,
+      paragraphs: JSON.parse(item.paragraphs || '[]'),
+      notes: JSON.parse(item.notes || '[]'),
+      tags: JSON.parse(item.tags || '[]'),
+      extra_info: JSON.parse(item.extra_info || '{}')
+    }))
+  }
+
+  // 根据ID获取诗词详情
+  getPoetryById(id: number): Poetry | null {
+    const stmt = this.db.prepare(`
+      SELECT
+        p.*,
+        c.name as category_name
+      FROM poetry p
+      JOIN categories c ON p.category_id = c.id
+      WHERE p.id = ?
+    `)
+    const result = stmt.get(id) as any
+
+    if (!result) return null
+
+    return {
+      ...result,
+      paragraphs: JSON.parse(result.paragraphs || '[]'),
+      notes: JSON.parse(result.notes || '[]'),
+      tags: JSON.parse(result.tags || '[]'),
+      extra_info: JSON.parse(result.extra_info || '{}')
+    }
+  }
+
+  // 全文搜索
+  searchPoetry(keyword: string, limit: number = 10): SearchResult[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM poetry_search
+      WHERE poetry_search MATCH ?
+      ORDER BY rank
+      LIMIT ?
+    `)
+    return stmt.all(keyword, limit) as SearchResult[]
+  }
+
+  // 获取所有作者
+  getAllAuthors(): string[] {
+    const stmt = this.db.prepare('SELECT DISTINCT author FROM poetry ORDER BY author')
+    const results = stmt.all() as { author: string }[]
+    return results.map((item) => item.author)
+  }
+
+  // 获取所有词牌名
+  getAllRhythmics(): string[] {
+    const stmt = this.db.prepare(`
+      SELECT DISTINCT rhythmic FROM poetry
+      WHERE rhythmic IS NOT NULL AND rhythmic != ''
+      ORDER BY rhythmic
+    `)
+    const results = stmt.all() as { rhythmic: string }[]
+    return results.map((item) => item.rhythmic)
+  }
+
+  // 获取随机诗词
+  getRandomPoetry(count: number = 1): Poetry[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM poetry
+      ORDER BY RANDOM()
+      LIMIT ?
+    `)
+    const results = stmt.all(count) as any[]
+
+    return results.map((item) => ({
+      ...item,
+      paragraphs: JSON.parse(item.paragraphs || '[]'),
+      notes: JSON.parse(item.notes || '[]'),
+      tags: JSON.parse(item.tags || '[]'),
+      extra_info: JSON.parse(item.extra_info || '{}')
+    }))
+  }
+
+  // 事务示例 - 添加新诗词
+  addPoetry(poetry: Omit<Poetry, 'id' | 'created_at' | 'updated_at'>): number {
+    const insert = this.db.prepare(`
+      INSERT INTO poetry (
+        category_id, title, title_pinyin, title_initials,
+        rhythmic, rhythmic_pinyin, rhythmic_initials,
+        author, author_pinyin, author_initials,
+        paragraphs, notes, tags, extra_info
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      )
+    `)
+
+    return this.db.transaction(() => {
+      const result = insert.run(
+        poetry.category_id,
+        poetry.title,
+        poetry.title_pinyin,
+        poetry.title_initials,
+        poetry.rhythmic,
+        poetry.rhythmic_pinyin,
+        poetry.rhythmic_initials,
+        poetry.author,
+        poetry.author_pinyin,
+        poetry.author_initials,
+        JSON.stringify(poetry.paragraphs),
+        JSON.stringify(poetry.notes),
+        JSON.stringify(poetry.tags),
+        JSON.stringify(poetry.extra_info)
+      )
+
+      return result.lastInsertRowid as number
+    })()
+  }
+}
+
+export const poetryDB = new PoetryDB(poetryDBPath)

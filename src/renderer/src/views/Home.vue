@@ -1,0 +1,182 @@
+<script setup lang="ts">
+import { DataTableColumns, NButton, NTag } from 'naive-ui'
+
+interface Poetry {
+  id: number
+  title: string
+  author: string
+  rhythmic: string | null
+  paragraphs: string[]
+  category_name: string
+}
+
+interface Category {
+  id: number
+  name: string
+}
+
+const searchKeyword = ref('')
+const selectedCategory = ref<number | null>(null)
+const currentPage = ref(1)
+const pageSize = ref(10)
+const totalItems = ref(0)
+const isLoading = ref(false)
+const poetryList = ref<Poetry[]>([])
+const categories = ref<Category[]>([])
+
+// 表头配置
+const columns: DataTableColumns<Poetry> = [
+  {
+    title: '标题',
+    key: 'title',
+    render: (row) => h('span', { class: 'font-bold' }, row.title)
+  },
+  {
+    title: '作者',
+    key: 'author',
+    width: 120
+  },
+  {
+    title: '词牌',
+    key: 'rhythmic',
+    render: (row) => (row.rhythmic ? h(NTag, { type: 'info' }, () => row.rhythmic) : null)
+  },
+  {
+    title: '分类',
+    key: 'category_name',
+    width: 100
+  },
+  {
+    title: '内容',
+    key: 'paragraphs',
+    render: (row) => h('div', { width: 200 }, row.paragraphs.join(' | '))
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 120,
+    render: (row) =>
+      h(
+        NButton,
+        {
+          size: 'small',
+          type: 'primary',
+          onClick: () => viewDetail(row.id)
+        },
+        () => '查看详情'
+      )
+  }
+]
+
+// 加载分类数据
+const loadCategories = async () => {
+  try {
+    categories.value = await window.electronAPI.db.getAllCategories()
+  } catch (error) {
+    console.error('加载分类失败:', error)
+  }
+}
+
+// 搜索诗词
+const searchPoetry = async () => {
+  try {
+    isLoading.value = true
+    const options = {
+      keyword: searchKeyword.value,
+      categoryId: selectedCategory.value || undefined,
+      limit: pageSize.value,
+      offset: (currentPage.value - 1) * pageSize.value
+    }
+
+    // 明确指定返回类型
+    const results = await Promise.all([
+      window.electronAPI.db.getPoetryList(options),
+      window.electronAPI.db.getPoetryCount(options)
+    ])
+
+    poetryList.value = results[0] as Poetry[]
+    totalItems.value = results[1] as number
+  } catch (error) {
+    console.error('搜索失败:', error)
+    poetryList.value = []
+    totalItems.value = 0
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 查看详情
+const viewDetail = (id: number) => {
+  // 这里可以跳转到详情页或打开对话框
+  console.log('查看诗词详情:', id)
+}
+
+// 重置搜索
+const resetSearch = () => {
+  searchKeyword.value = ''
+  selectedCategory.value = null
+  currentPage.value = 1
+  searchPoetry()
+}
+
+// 初始化加载数据
+onMounted(() => {
+  loadCategories()
+  searchPoetry()
+})
+</script>
+
+<template>
+  <main class="grid grid-rows-[auto_1fr] p-1 gap-1">
+    <n-card :bordered="false">
+      <n-space vertical>
+        <n-space>
+          <n-input
+            v-model:value="searchKeyword"
+            placeholder="输入关键词搜索"
+            clearable
+            style="width: 300px"
+            @keyup.enter="searchPoetry"
+          />
+          <n-select
+            v-model:value="selectedCategory"
+            :options="categories.map((c) => ({ label: c.name, value: c.id }))"
+            placeholder="选择分类"
+            clearable
+            style="width: 200px"
+          />
+          <n-button type="primary" @click="searchPoetry">
+            <template #icon>
+              <div class="i-tabler-search" />
+            </template>
+            搜索
+          </n-button>
+          <n-button @click="resetSearch">重置</n-button>
+        </n-space>
+      </n-space>
+    </n-card>
+
+    <n-card :bordered="false">
+      <n-spin :show="isLoading">
+        <n-data-table :columns="columns" :data="poetryList" :bordered="true" :single-line="false" />
+
+        <n-pagination
+          v-model:page="currentPage"
+          :page-count="Math.ceil(totalItems / pageSize)"
+          :page-size="pageSize"
+          :page-sizes="[10, 20, 30, 50]"
+          show-size-picker
+          @update:page="searchPoetry"
+          @update:page-size="
+            (size) => {
+              pageSize = size
+              searchPoetry()
+            }
+          "
+        />
+      </n-spin>
+    </n-card>
+  </main>
+</template>
+
+<style scoped></style>

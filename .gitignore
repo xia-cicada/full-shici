@@ -6,4 +6,4 @@ out
 *.log*
 **/auto-imports.d.ts
 **/components.d.ts
-resources/poetry.sqlite
+resources/poetry.sqlite*

@@ -15,8 +15,8 @@ function createWindow(type: WINDOW_TYPE): BrowserWindow {
   // Create the browser window.
   const isDesktop = type === WINDOW_TYPE.desktop
   const mainWindow = new BrowserWindow({
-    width: isDesktop ? 900 : 900, // 之后适配移动端样式
-    height: isDesktop ? 670 : 670,
+    width: isDesktop ? 1000 : 1000, // 之后适配移动端样式
+    height: isDesktop ? 800 : 800,
     show: false,
     autoHideMenuBar: true,
     frame: false,
@@ -27,12 +27,6 @@ function createWindow(type: WINDOW_TYPE): BrowserWindow {
       contextIsolation: true
     }
   })
-
-  if (isDesktop) {
-    mainWindow.setPosition(20, 20)
-  } else {
-    mainWindow.setPosition(700, 20)
-  }
 
   mainWindow.on('ready-to-show', () => {
     console.log('ready to show', type)

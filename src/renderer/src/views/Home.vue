@@ -29,6 +29,7 @@ const columns: DataTableColumns<Poetry> = [
   {
     title: '标题',
     key: 'title',
+    width: 200,
     render: (row) => h('span', { class: 'font-bold' }, row.title)
   },
   {
@@ -49,7 +50,10 @@ const columns: DataTableColumns<Poetry> = [
   {
     title: '内容',
     key: 'paragraphs',
-    render: (row) => h('div', { width: 200 }, row.paragraphs.join(' | '))
+    width: 200,
+    ellipsis: {
+      tooltip: false
+    }
   },
   {
     title: '操作',
@@ -127,55 +131,60 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="grid grid-rows-[auto_1fr] p-1 gap-1">
-    <n-card :bordered="false">
-      <n-space vertical>
-        <n-space>
-          <n-input
-            v-model:value="searchKeyword"
-            placeholder="输入关键词搜索"
-            clearable
-            style="width: 300px"
-            @keyup.enter="searchPoetry"
-          />
-          <n-select
-            v-model:value="selectedCategory"
-            :options="categories.map((c) => ({ label: c.name, value: c.id }))"
-            placeholder="选择分类"
-            clearable
-            style="width: 200px"
-          />
-          <n-button type="primary" @click="searchPoetry">
-            <template #icon>
-              <div class="i-tabler-search" />
-            </template>
-            搜索
-          </n-button>
-          <n-button @click="resetSearch">重置</n-button>
-        </n-space>
-      </n-space>
-    </n-card>
+  <main class="overflow-hidden grid grid-rows-[auto_1fr] p-1">
+    <n-flex class="p-3">
+      <n-input
+        v-model:value="searchKeyword"
+        placeholder="输入关键词搜索"
+        clearable
+        style="width: 300px"
+        @keyup.enter="searchPoetry"
+      />
+      <n-select
+        v-model:value="selectedCategory"
+        :options="categories.map((c) => ({ label: c.name, value: c.id }))"
+        placeholder="选择分类"
+        clearable
+        style="width: 200px"
+      />
+      <n-button type="primary" @click="searchPoetry">
+        <template #icon>
+          <div class="i-tabler-search" />
+        </template>
+        搜索
+      </n-button>
+      <n-button @click="resetSearch">重置</n-button>
+    </n-flex>
 
-    <n-card :bordered="false">
-      <n-spin :show="isLoading">
-        <n-data-table :columns="columns" :data="poetryList" :bordered="true" :single-line="false" />
-
-        <n-pagination
-          v-model:page="currentPage"
-          :page-count="Math.ceil(totalItems / pageSize)"
-          :page-size="pageSize"
-          :page-sizes="[10, 20, 30, 50]"
-          show-size-picker
-          @update:page="searchPoetry"
-          @update:page-size="
-            (size) => {
-              pageSize = size
-              searchPoetry()
-            }
-          "
+    <n-spin
+      content-class="h-full box-border overflow-hidden grid grid-cols-1 grid-rows-[1fr_min-content] gap-3 justify-items-center p-3"
+      :show="isLoading"
+    >
+      <div>
+        <n-data-table
+          :columns="columns"
+          :data="poetryList"
+          :bordered="true"
+          style="height: 100%"
+          flex-height
         />
-      </n-spin>
-    </n-card>
+      </div>
+
+      <n-pagination
+        v-model:page="currentPage"
+        :page-count="Math.ceil(totalItems / pageSize)"
+        :page-size="pageSize"
+        :page-sizes="[10, 20, 30, 50]"
+        show-size-picker
+        @update:page="searchPoetry"
+        @update:page-size="
+          (size) => {
+            pageSize = size
+            searchPoetry()
+          }
+        "
+      />
+    </n-spin>
   </main>
 </template>
 

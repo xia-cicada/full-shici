@@ -9,13 +9,8 @@
     </n-layout-header>
 
     <!-- 内容区 -->
-    <n-layout-content
-      position="absolute"
-      content-class="flex flex-col"
-      :native-scrollbar="false"
-      style="top: 50px"
-    >
-      <div class="p-10">
+    <n-layout-content position="absolute" content-class="flex flex-col" style="top: 50px">
+      <div class="p-10 box-border h-full grid grid-cols-2 gap-2">
         <n-card v-if="loading" class="mb-6">
           <n-skeleton height="30px" width="60%" class="mb-4" />
           <n-skeleton text style="width: 100%" />
@@ -23,49 +18,48 @@
 
         <template v-else-if="poetry">
           <!-- 作者信息 -->
-          <div class="mb-8">
-            <n-text class="text-lg font-bold">{{ poetry.author }}</n-text>
-            <n-text depth="3" class="block text-sm">{{ poetry.category_name }}</n-text>
-          </div>
-
-          <!-- 诗词内容 -->
-          <div class="poetry-content mb-8">
-            <n-h2 class="text-2xl mb-6">{{ poetry.title }}</n-h2>
-
-            <div v-for="(para, index) in poetry.paragraphs" :key="index" class="mb-4">
-              <p class="text-lg">{{ para }}</p>
+          <n-scrollbar>
+            <div class="mb-8">
+              <n-text class="text-lg font-bold">{{ poetry.author }}</n-text>
+              <n-text depth="3" class="block text-sm">{{ poetry.category_name }}</n-text>
             </div>
-          </div>
 
-          <!-- 附加信息 -->
-          <n-collapse arrow-placement="right">
-            <n-collapse-item title="词牌信息" name="rhythmic" v-if="poetry.rhythmic">
-              <n-p>{{ poetry.rhythmic }}</n-p>
-            </n-collapse-item>
+            <!-- 诗词内容 -->
+            <div class="poetry-content mb-8">
+              <n-h2 class="text-2xl mb-6">{{ poetry.title }}</n-h2>
 
-            <n-collapse-item title="注释" name="notes" v-if="poetry.notes.length">
-              <ul class="list-disc pl-6 space-y-2">
-                <li v-for="(note, i) in poetry.notes" :key="i">
-                  <n-p>{{ note }}</n-p>
-                </li>
-              </ul>
-            </n-collapse-item>
-
-            <n-collapse-item title="标签" name="tags" v-if="poetry.tags.length">
-              <div class="flex flex-wrap gap-2">
-                <n-tag v-for="(tag, i) in poetry.tags" :key="i" type="primary" round size="small">
-                  {{ tag }}
-                </n-tag>
+              <div v-for="(para, index) in poetry.paragraphs" :key="index" class="mb-4">
+                <p class="text-lg">{{ para }}</p>
               </div>
-            </n-collapse-item>
-          </n-collapse>
+            </div>
+
+            <!-- 附加信息 -->
+            <div class="pr-2">
+              <n-collapse arrow-placement="right" :expanded-names="['notes', 'tags']">
+                <n-collapse-item title="注释" name="notes" v-if="poetry.notes.length">
+                  <ul class="list-disc pl-6 space-y-2">
+                    <li v-for="(note, i) in poetry.notes" :key="i">
+                      <n-p>{{ note }}</n-p>
+                    </li>
+                  </ul>
+                </n-collapse-item>
+
+                <n-collapse-item title="标签" name="tags" v-if="poetry.tags.length">
+                  <div class="flex flex-wrap gap-2">
+                    <n-tag v-for="(tag, i) in poetry.tags" :key="i" type="primary" size="small">
+                      {{ tag }}
+                    </n-tag>
+                  </div>
+                </n-collapse-item>
+              </n-collapse>
+            </div>
+          </n-scrollbar>
+          <n-scrollbar>
+            <poetry-analysis :poetry="poetry"></poetry-analysis>
+          </n-scrollbar>
         </template>
 
-        <n-empty v-else description="找不到这首诗词" class="mt-20">
-          <template #extra>
-            <n-button size="small" @click="router.push('/')">返回首页</n-button>
-          </template>
-        </n-empty>
+        <n-empty v-else description="找不到这首诗词" class="mt-20"> </n-empty>
       </div>
     </n-layout-content>
   </n-layout>

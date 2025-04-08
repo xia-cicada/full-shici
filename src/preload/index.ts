@@ -29,7 +29,7 @@ const electronAPI: ExposedApi = {
     getRandomPoetry: (count) => ipcRenderer.invoke('db-get-random-poetry', count),
 
     // 搜索相关
-    searchPoetry: (keyword, limit) => ipcRenderer.invoke('db-search', keyword, limit),
+    searchPoetry: (keyword, options) => ipcRenderer.invoke('db-search', keyword, options),
 
     // 元数据相关
     getAllAuthors: () => ipcRenderer.invoke('db-get-all-authors'),
@@ -37,6 +37,10 @@ const electronAPI: ExposedApi = {
 
     // 添加新诗词
     addPoetry: (poetry) => ipcRenderer.invoke('db-add-poetry', poetry)
+  },
+
+  ai: {
+    analyzePoetry: (poetry) => ipcRenderer.invoke('ai-analyze-poetry', poetry)
   }
 }
 

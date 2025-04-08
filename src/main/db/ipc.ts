@@ -30,8 +30,8 @@ export function setupPoetryDatabaseIPC() {
   })
 
   // 搜索相关
-  ipcMain.handle('db-search', (_event, keyword: string, limit: number = 10) => {
-    return poetryDB.searchPoetry(keyword, limit)
+  ipcMain.handle('db-search', (_event, keyword: string, options: SearchOptions) => {
+    return poetryDB.searchPoetry(keyword, options)
   })
 
   // 元数据相关

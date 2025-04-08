@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setupPoetryDatabaseIPC } from './db/ipc'
 import { poetryDB } from './db/db'
+import { setupAIIPC } from './ai/ipc'
 
 enum WINDOW_TYPE {
   'desktop',
@@ -92,6 +93,7 @@ function createWindows() {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   setupPoetryDatabaseIPC()
+  setupAIIPC()
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 

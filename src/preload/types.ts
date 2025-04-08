@@ -1,4 +1,10 @@
-import { Category, Poetry, SearchOptions, PaginatedSearchResult } from '../main/db/types'
+import {
+  Category,
+  Poetry,
+  SearchOptions,
+  PaginatedSearchResult,
+  PoetryAnalysis
+} from '../main/db/types'
 
 export interface PoetryDBAPI {
   // 分类相关
@@ -28,6 +34,10 @@ export interface PoetryDBAPI {
   addPoetry: (poetry: Omit<Poetry, 'id' | 'created_at' | 'updated_at'>) => Promise<number>
 }
 
+export interface aiAPI {
+  analyzePoetry: (poetry: Poetry) => Promise<PoetryAnalysis>
+}
+
 export interface ExposedApi {
   // 窗口控制
   minimize: () => Promise<void>
@@ -38,4 +48,5 @@ export interface ExposedApi {
 
   // 数据库访问
   db: PoetryDBAPI
+  ai: aiAPI
 }

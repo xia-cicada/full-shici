@@ -43,7 +43,7 @@ const columns: DataTableColumns<PoetryRow> = [
   {
     title: '词牌',
     key: 'rhythmic',
-    render: (row) => (row.rhythmic ? h(NTag, { type: 'info' }, () => row.rhythmic) : null)
+    render: (row) => (row.rhythmic ? h(NTag, {}, () => row.rhythmic) : null)
   },
   {
     title: '分类',

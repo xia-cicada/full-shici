@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import { Category, PaginatedSearchResult, Poetry, SearchOptions, SearchResult } from './types'
-import poetryDBPath from '../../../resources/poetry.sqlite?asset'
+import poetryDBPath from '../../../resources/poetry.sqlite?asset&asarUnpack'
 
 class PoetryDB {
   private db: Database.Database

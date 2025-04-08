@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: com.lotus.fullshici
 productName: full-shici
 directories:
   buildResources: build

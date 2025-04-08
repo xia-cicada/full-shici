@@ -29,17 +29,13 @@ export interface Poetry {
   category_name?: string
 }
 
-export interface SearchResult {
-  rowid: number
-  title: string
-  author: string
-  rhythmic: string
-  title_pinyin: string
-  author_pinyin: string
-  rhythmic_pinyin: string
-  title_initials: string
-  author_initials: string
-  rhythmic_initials: string
+export type SearchResult = Poetry & {
+  relevance?: number // bm25 相关性评分
+}
+
+export interface PaginatedSearchResult {
+  results: SearchResult[]
+  total: number
 }
 
 export interface SearchOptions {

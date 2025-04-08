@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import { Category, Poetry, SearchOptions, SearchResult } from './types'
+import { Category, PaginatedSearchResult, Poetry, SearchOptions, SearchResult } from './types'
 import poetryDBPath from '../../../resources/poetry.sqlite?asset'
 
 class PoetryDB {
@@ -134,14 +134,126 @@ class PoetryDB {
   }
 
   // 全文搜索
-  searchPoetry(keyword: string, limit: number = 10): SearchResult[] {
-    const stmt = this.db.prepare(`
-      SELECT * FROM poetry_search
+  searchPoetry(
+    keyword: string,
+    options: {
+      categoryId?: number
+      page?: number
+      limit?: number
+    } = {}
+  ): PaginatedSearchResult {
+    const currentPage = Math.max(1, options.page || 1)
+    const limit = Math.max(1, options.limit || 10)
+
+    if (!keyword?.trim()) {
+      // 空搜索走普通分页查询（更快）
+      return this._getSimplePaginatedResult(options.categoryId, currentPage, limit)
+    }
+
+    // 条件搜索走FTS5全文检索
+    return this._getFtsPaginatedResult(keyword, options.categoryId, currentPage, limit)
+  }
+
+  // 普通分页查询（不经过FTS5）
+  private _getSimplePaginatedResult(
+    categoryId?: number,
+    page: number = 1,
+    limit: number = 10
+  ): PaginatedSearchResult {
+    const offset = (page - 1) * limit
+
+    let countQuery = `SELECT COUNT(*) as total FROM poetry WHERE 1=1`
+    const countParams: any[] = []
+
+    if (categoryId) {
+      countQuery += ' AND category_id = ?'
+      countParams.push(categoryId)
+    }
+
+    const { total } = this.db.prepare(countQuery).get(...countParams) as { total: number }
+
+    let dataQuery = `
+      SELECT
+        p.*,
+        c.name as category_name
+      FROM poetry p
+      JOIN categories c ON p.category_id = c.id
+      WHERE 1=1
+    `
+
+    const dataParams = [...countParams]
+    if (categoryId) {
+      dataQuery += ' AND p.category_id = ?'
+    }
+
+    dataQuery += ' ORDER BY p.id DESC LIMIT ? OFFSET ?'
+    dataParams.push(limit, offset)
+
+    const rawResults = this.db.prepare(dataQuery).all(...dataParams)
+    const results = this._parsePoetryResults(rawResults)
+
+    return {
+      results,
+      total
+    }
+  }
+
+  // FTS5全文检索分页
+  private _getFtsPaginatedResult(
+    keyword: string,
+    categoryId?: number,
+    page: number = 1,
+    limit: number = 10
+  ): PaginatedSearchResult {
+    const offset = (page - 1) * limit
+
+    let baseQuery = `
+      FROM poetry_search
+      JOIN poetry p ON poetry_search.rowid = p.id
+      JOIN categories c ON p.category_id = c.id
       WHERE poetry_search MATCH ?
-      ORDER BY rank
-      LIMIT ?
+    `
+
+    const params: any[] = [keyword]
+    if (categoryId) {
+      baseQuery += ' AND p.category_id = ?'
+      params.push(categoryId)
+    }
+
+    // 获取总数（使用COUNT优化）
+    const countStmt = this.db.prepare(`SELECT COUNT(*) as total ${baseQuery}`)
+    const { total } = countStmt.get(...params) as { total: number }
+
+    // 获取分页数据
+    const dataStmt = this.db.prepare(`
+      SELECT
+        p.*,
+        c.name as category_name,
+        bm25(poetry_search) as relevance
+      ${baseQuery}
+      ORDER BY relevance
+      LIMIT ? OFFSET ?
     `)
-    return stmt.all(keyword, limit) as SearchResult[]
+
+    const pageParams = [...params, limit, offset]
+    const rawResults = dataStmt.all(...pageParams)
+    const results = this._parsePoetryResults(rawResults)
+
+    return {
+      results,
+      total
+    }
+  }
+
+  // 公用结果解析方法
+  private _parsePoetryResults(rawResults: any[]): SearchResult[] {
+    return rawResults.map((item) => ({
+      ...item,
+      paragraphs: JSON.parse(item.paragraphs || '[]'),
+      notes: JSON.parse(item.notes || '[]'),
+      tags: JSON.parse(item.tags || '[]'),
+      extra_info: JSON.parse(item.extra_info || '{}')
+    }))
   }
 
   // 获取所有作者

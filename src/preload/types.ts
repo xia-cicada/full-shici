@@ -1,4 +1,10 @@
-import { Category, Poetry, SearchResult, SearchOptions } from '../main/db/types'
+import {
+  Category,
+  Poetry,
+  SearchResult,
+  SearchOptions,
+  PaginatedSearchResult
+} from '../main/db/types'
 
 export interface PoetryDBAPI {
   // 分类相关
@@ -12,7 +18,13 @@ export interface PoetryDBAPI {
   getRandomPoetry: (count?: number) => Promise<Poetry[]>
 
   // 搜索相关
-  searchPoetry: (keyword: string, limit?: number) => Promise<SearchResult[]>
+  searchPoetry: (
+    keyword: string,
+    options: {
+      categoryId?: number
+      limit?: number
+    }
+  ) => Promise<PaginatedSearchResult>
 
   // 元数据相关
   getAllAuthors: () => Promise<string[]>

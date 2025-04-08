@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { DataTableColumns, NButton, NTag } from 'naive-ui'
 
-interface Poetry {
+interface PoetryRow {
   id: number
   title: string
   author: string
@@ -21,11 +21,11 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const totalItems = ref(0)
 const isLoading = ref(false)
-const poetryList = ref<Poetry[]>([])
+const poetryList = ref<PoetryRow[]>([])
 const categories = ref<Category[]>([])
 
 // 表头配置
-const columns: DataTableColumns<Poetry> = [
+const columns: DataTableColumns<PoetryRow> = [
   {
     title: '标题',
     key: 'title',
@@ -82,24 +82,22 @@ const loadCategories = async () => {
 }
 
 // 搜索诗词
-const searchPoetry = async () => {
+const searchPoetry = async (toResetPage = false) => {
   try {
+    if (toResetPage) currentPage.value = 1
     isLoading.value = true
     const options = {
       keyword: searchKeyword.value,
       categoryId: selectedCategory.value || undefined,
-      limit: pageSize.value,
-      offset: (currentPage.value - 1) * pageSize.value
+      page: currentPage.value,
+      limit: pageSize.value
     }
 
     // 明确指定返回类型
-    const results = await Promise.all([
-      window.electronAPI.db.getPoetryList(options),
-      window.electronAPI.db.getPoetryCount(options)
-    ])
+    const { results, total } = await window.electronAPI.db.searchPoetry(options.keyword, options)
 
-    poetryList.value = results[0] as Poetry[]
-    totalItems.value = results[1] as number
+    poetryList.value = results as PoetryRow[]
+    totalItems.value = total as number
   } catch (error) {
     console.error('搜索失败:', error)
     poetryList.value = []
@@ -119,14 +117,13 @@ const viewDetail = (id: number) => {
 const resetSearch = () => {
   searchKeyword.value = ''
   selectedCategory.value = null
-  currentPage.value = 1
-  searchPoetry()
+  searchPoetry(true)
 }
 
 // 初始化加载数据
 onMounted(() => {
   loadCategories()
-  searchPoetry()
+  searchPoetry(true)
 })
 </script>
 
@@ -138,7 +135,7 @@ onMounted(() => {
         placeholder="输入关键词搜索"
         clearable
         style="width: 300px"
-        @keyup.enter="searchPoetry"
+        @keyup.enter="searchPoetry(true)"
       />
       <n-select
         v-model:value="selectedCategory"
@@ -147,7 +144,7 @@ onMounted(() => {
         clearable
         style="width: 200px"
       />
-      <n-button type="primary" @click="searchPoetry">
+      <n-button type="primary" @click="searchPoetry(true)">
         <template #icon>
           <div class="i-tabler-search" />
         </template>
@@ -176,7 +173,7 @@ onMounted(() => {
         :page-size="pageSize"
         :page-sizes="[10, 20, 30, 50]"
         show-size-picker
-        @update:page="searchPoetry"
+        @update:page="searchPoetry(false)"
         @update:page-size="
           (size) => {
             pageSize = size

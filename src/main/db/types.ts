@@ -46,3 +46,19 @@ export interface SearchOptions {
   limit?: number
   offset?: number
 }
+
+// 诗词赏析部分
+export interface VocabularyNote {
+  word: string
+  explanation: string
+}
+
+export interface PoetryAnalysis {
+  title: string
+  author: string
+  dynasty: string
+  vocabularyNotes: VocabularyNote[]
+  contentAnalysis: string
+  artisticFeatures: string[]
+  emotionalExpression: string
+}

@@ -24,16 +24,16 @@
         <template v-else-if="poetry">
           <!-- 作者信息 -->
           <div class="mb-8">
-            <n-text class="text-lg font-medium">{{ poetry.author }}</n-text>
+            <n-text class="text-lg font-bold">{{ poetry.author }}</n-text>
             <n-text depth="3" class="block text-sm">{{ poetry.category_name }}</n-text>
           </div>
 
           <!-- 诗词内容 -->
           <div class="poetry-content mb-8">
-            <n-h2 class="text-2xl font-serif mb-6">{{ poetry.title }}</n-h2>
+            <n-h2 class="text-2xl mb-6">{{ poetry.title }}</n-h2>
 
             <div v-for="(para, index) in poetry.paragraphs" :key="index" class="mb-4">
-              <p class="text-lg leading-loose font-serif">{{ para }}</p>
+              <p class="text-lg">{{ para }}</p>
             </div>
           </div>
 

@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-rou
 import MainLayout from '@/views/layout/MainLayout.vue'
 import Home from '@/views/Home.vue'
 import About from '@/views/About.vue'
+import Detail from '@/views/Detail.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -13,6 +14,11 @@ const routes: RouteRecordRaw[] = [
         path: 'home',
         name: 'home',
         component: Home
+      },
+      {
+        path: 'detail',
+        name: 'detail',
+        component: Detail
       },
       {
         path: 'about',

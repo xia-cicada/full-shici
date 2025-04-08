@@ -25,6 +25,8 @@ const isLoading = ref(false)
 const poetryList = ref<PoetryRow[]>([])
 const categories = ref<Category[]>([])
 
+const router = useRouter()
+
 // 表头配置
 const columns: DataTableColumns<PoetryRow> = [
   {
@@ -113,8 +115,7 @@ const searchPoetry = async (toResetPage = false) => {
 
 // 查看详情
 const viewDetail = (id: number) => {
-  // 这里可以跳转到详情页或打开对话框
-  console.log('查看诗词详情:', id)
+  router.push({ path: '/detail', query: { id } })
 }
 
 // 重置搜索

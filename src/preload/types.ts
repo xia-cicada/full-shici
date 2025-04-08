@@ -1,10 +1,4 @@
-import {
-  Category,
-  Poetry,
-  SearchResult,
-  SearchOptions,
-  PaginatedSearchResult
-} from '../main/db/types'
+import { Category, Poetry, SearchOptions, PaginatedSearchResult } from '../main/db/types'
 
 export interface PoetryDBAPI {
   // 分类相关

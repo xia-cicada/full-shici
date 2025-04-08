@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getPy } from '@/utils'
 import { DataTableColumns, NButton, NTag } from 'naive-ui'
 
 interface PoetryRow {
@@ -93,8 +94,11 @@ const searchPoetry = async (toResetPage = false) => {
       limit: pageSize.value
     }
 
-    // 明确指定返回类型
-    const { results, total } = await window.electronAPI.db.searchPoetry(options.keyword, options)
+    // 由于诗词简繁体都有并且不好区分，因此查询关键字使用拼音做适配
+    const { results, total } = await window.electronAPI.db.searchPoetry(
+      getPy(options.keyword),
+      options
+    )
 
     poetryList.value = results as PoetryRow[]
     totalItems.value = total as number

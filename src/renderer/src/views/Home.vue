@@ -61,7 +61,7 @@ const columns: DataTableColumns<PoetryRow> = [
   {
     title: '操作',
     key: 'actions',
-    width: 120,
+    width: 100,
     render: (row) =>
       h(
         NButton,
@@ -70,7 +70,7 @@ const columns: DataTableColumns<PoetryRow> = [
           type: 'primary',
           onClick: () => viewDetail(row.id)
         },
-        () => '查看详情'
+        () => '详情'
       )
   }
 ]

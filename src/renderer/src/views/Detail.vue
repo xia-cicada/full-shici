@@ -1,5 +1,5 @@
 <template>
-  <n-layout class="h-full overflow-hidden grid grid-rows-[min-content_1fr]">
+  <n-layout class="h-full overflow-hidden grid grid-rows-[min-content_1fr]" id="poetry-detail">
     <!-- 头部 -->
     <n-layout-header class="flex items-center gap-3 px-6" style="height: 50px">
       <n-button quaternary @click="router.back()">

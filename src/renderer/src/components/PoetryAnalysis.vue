@@ -1,9 +1,14 @@
 <template>
-  <div class="min-h-[20em]">
+  <div>
     <!-- 加载状态 -->
-    <n-spin :show="loading" description="诗歌正在赏析中...">
+    <n-spin
+      :show="loading"
+      content-class="min-h-[10rem]"
+      size="small"
+      description="诗歌正在赏析中..."
+    >
       <!-- 诗歌基本信息 -->
-      <n-card :title="poetry.title">
+      <n-card :bordered="false" content-style="padding: 0 0.7rem;">
         <!-- 赏析结果展示区 -->
         <div class="flex flex-col gap-2" v-if="analysisResult">
           <n-card name="vocabulary" title="词汇注释" hoverable>
@@ -43,6 +48,7 @@
 <script lang="ts" setup>
 import { toDeepRaw } from '@/utils'
 import { Poetry, PoetryAnalysis } from '@main/db/types'
+import { poetryHighlight } from './poetry-highlight'
 
 const props = defineProps<{
   poetry: Poetry
@@ -52,12 +58,14 @@ const loading = ref(true)
 const error = ref('')
 const analysisResult = ref<PoetryAnalysis>()
 
+let cleanHighlight: Function
 onMounted(async () => {
   try {
     // 通过Electron IPC调用AI分析
     const result = await window.electronAPI.ai.analyzePoetry(toDeepRaw(props.poetry))
 
     analysisResult.value = result
+    cleanHighlight = poetryHighlight(result.vocabularyNotes)
   } catch (err) {
     error.value = `分析失败: ${err instanceof Error ? err.message : String(err)}`
     console.error('AI分析错误:', err)
@@ -65,6 +73,12 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+onUnmounted(() => cleanHighlight?.())
 </script>
 
-<style lang="scss"></style>
+<style lang="scss">
+::highlight(poetry-vocabulary-note) {
+  color: #ec2c64;
+}
+</style>

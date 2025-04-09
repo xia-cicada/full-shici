@@ -61,7 +61,7 @@ const analysisResult = ref<PoetryAnalysis>()
 let cleanHighlight: Function
 onMounted(async () => {
   try {
-    // 通过Electron IPC调用AI分析
+    cleanHighlight?.()
     const result = await window.electronAPI.ai.analyzePoetry(toDeepRaw(props.poetry))
 
     analysisResult.value = result
@@ -73,12 +73,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-onUnmounted(() => cleanHighlight?.())
 </script>
 
-<style lang="scss">
-::highlight(poetry-vocabulary-note) {
-  color: #ec2c64;
-}
-</style>
+<style lang="scss"></style>

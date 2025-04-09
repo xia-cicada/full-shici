@@ -72,6 +72,9 @@ importers:
       eslint-plugin-vue:
         specifier: ^9.33.0
         version: 9.33.0(eslint@9.23.0(jiti@2.4.2))
+      hint.css:
+        specifier: ^3.0.0
+        version: 3.0.0
       naive-ui:
         specifier: ^2.41.0
         version: 2.41.0(vue@3.5.13(typescript@5.8.2))
@@ -1972,6 +1975,9 @@ packages:
   highlight.js@11.11.1:
     resolution: {integrity: sha512-Xwwo44whKBVCYoliBQwaPvtd/2tYFkRQtXDWj1nackaV2JPXx3L0+Jvd8/qCJ2p+ML0/XVkJ2q+Mr+UVdpJK5w==}
     engines: {node: '>=12.0.0'}
+
+  hint.css@3.0.0:
+    resolution: {integrity: sha512-UoJ+yLO2kEcfsm/XMU1suAIR0sxCq4HO22pw4okJQo5TQDlA2BrJ57Eaxh4eT+9PDInIDTRm9TVzzbHHWEqASQ==}
 
   hookable@5.5.3:
     resolution: {integrity: sha512-Yc+BQe8SvoXH1643Qez1zqLRmbA5rCL+sSmk6TVos0LWVfNIB7PGncdlId77WzLGSIB5KaWgTaNTs2lNVEI6VQ==}
@@ -5374,6 +5380,8 @@ snapshots:
   he@1.2.0: {}
 
   highlight.js@11.11.1: {}
+
+  hint.css@3.0.0: {}
 
   hookable@5.5.3: {}
 

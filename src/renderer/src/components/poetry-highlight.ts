@@ -1,41 +1,57 @@
 import { VocabularyNote } from '@main/db/types'
+import { escape, escapeRegExp } from 'es-toolkit'
 
 export const poetryHighlight = (
   notes: VocabularyNote[],
   rootEl: HTMLElement = document.getElementById('poetry-detail')!
 ) => {
-  const highlight = new Highlight()
-
+  if (!rootEl) return () => {}
   const treeWalker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT, null)
 
-  notes.forEach((note) => {
-    const { word } = note
-    let currentNode: Node | null = treeWalker.currentNode
+  const textNodes: Node[] = []
+  while (treeWalker.nextNode()) {
+    textNodes.push(treeWalker.currentNode)
+  }
 
-    treeWalker.currentNode = rootEl
+  textNodes.forEach((textNode) => {
+    let content = textNode.nodeValue || ''
+    const parent = textNode.parentElement
+    if (!parent) return
 
-    while ((currentNode = treeWalker.nextNode())) {
-      const textContent = currentNode.nodeValue || ''
-      let startPos = 0
+    notes.forEach((note) => {
+      const { word, explanation } = note
+      const regex = new RegExp(escapeRegExp(word), 'g')
 
-      while (true) {
-        const index = textContent.indexOf(word, startPos)
-        if (index === -1) break
+      content = content.replace(
+        regex,
+        (match) =>
+          `<span class="vocabulary-note hint--bottom-right hint--no-shadow hint--no-arrow"
+            aria-label="${escape(explanation)}">
+            ${match}
+          </span>`
+      )
+    })
 
-        const range = new Range()
-        range.setStart(currentNode, index)
-        range.setEnd(currentNode, index + word.length)
+    if (content !== textNode.nodeValue) {
+      const temp = document.createElement('span')
+      temp.innerHTML = content
 
-        highlight.add(range)
-
-        startPos = index + word.length
+      while (temp.firstChild) {
+        parent.insertBefore(temp.firstChild, textNode)
       }
+      parent.removeChild(textNode)
     }
   })
+  return () => clearPoetryHighlights(rootEl)
+}
 
-  CSS.highlights.set('poetry-vocabulary-note', highlight)
-
-  return () => {
-    CSS.highlights.delete('poetry-vocabulary-note')
-  }
+const clearPoetryHighlights = (rootEl: HTMLElement) => {
+  if (!rootEl) return
+  const highlights = rootEl.querySelectorAll('.vocabulary-note')
+  highlights.forEach((highlight) => {
+    const parent = highlight.parentNode
+    if (parent) {
+      parent.replaceChild(document.createTextNode(highlight.textContent || ''), highlight)
+    }
+  })
 }

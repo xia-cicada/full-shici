@@ -1,1 +1,17 @@
 @use './base.scss' as *;
+
+.vocabulary-note {
+  color: #ec2c64;
+}
+
+[class*='hint--']::after {
+  font-family: inherit;
+  background-color: #428675;
+  border-radius: 0.2em;
+}
+
+[theme='dark'] {
+  .vocabulary-note {
+    color: #b13b5c;
+  }
+}

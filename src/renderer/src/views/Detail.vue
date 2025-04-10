@@ -10,7 +10,7 @@
 
     <!-- 内容区 -->
     <n-layout-content position="absolute" content-class="flex flex-col" style="top: 50px">
-      <div class="p-10 box-border h-full grid grid-cols-2 gap-2">
+      <div class="p-10 box-border h-full grid grid-cols-2">
         <n-card v-if="loading" class="mb-6">
           <n-skeleton height="30px" width="60%" class="mb-4" />
           <n-skeleton text style="width: 100%" />
@@ -25,7 +25,7 @@
             </div>
 
             <!-- 诗词内容 -->
-            <div class="poetry-content mb-8">
+            <div class="poetry-content mb-8 pr-3">
               <n-h2 class="text-2xl mb-6">{{ poetry.title }}</n-h2>
 
               <div v-for="(para, index) in poetry.paragraphs" :key="index" class="mb-4">

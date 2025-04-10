@@ -1,4 +1,3 @@
-import 'hint.css'
 import './assets/main.scss'
 import 'virtual:uno.css'
 

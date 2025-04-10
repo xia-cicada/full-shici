@@ -26,7 +26,6 @@ const currentConfig = ref<Partial<ModelConfig>>({
 const loadConfigs = async () => {
   try {
     configs.value = await window.electronAPI.ai.getAllModelConfigs()
-    console.log(configs.value)
   } catch (error) {
     message.error('加载配置失败')
     console.error(error)

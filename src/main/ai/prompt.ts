@@ -1,4 +1,4 @@
-import { Poetry } from '../db/types'
+import { Poetry } from '../poetry/types'
 
 export function generateAnalysisPrompt(request: Poetry): string {
   return `

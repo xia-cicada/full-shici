@@ -2,8 +2,8 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { setupPoetryDatabaseIPC } from './db/ipc'
-import { poetryDB } from './db/db'
+import { setupPoetryDatabaseIPC } from './poetry/ipc'
+import { poetryDB } from './poetry/db'
 import { setupAIIPC } from './ai/ipc'
 
 enum WINDOW_TYPE {

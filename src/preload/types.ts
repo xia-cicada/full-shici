@@ -4,7 +4,7 @@ import {
   SearchOptions,
   PaginatedSearchResult,
   PoetryAnalysis
-} from '../main/db/types'
+} from '../main/poetry/types'
 
 export interface PoetryDBAPI {
   // 分类相关

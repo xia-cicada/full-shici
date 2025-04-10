@@ -1,10 +1,10 @@
 import OpenAI from 'openai'
 import { modelConfig } from './model'
-import { Poetry, PoetryAnalysis } from '../db/types'
+import { Poetry, PoetryAnalysis } from '../poetry/types'
 import { generateAnalysisPrompt } from './prompt'
 import log from 'electron-log'
 
-class PoetryMaster {
+class AiAssist {
   openai: OpenAI
   constructor() {
     this.openai = new OpenAI(modelConfig)
@@ -53,4 +53,4 @@ class PoetryMaster {
   }
 }
 
-export const poetryMaster = new PoetryMaster()
+export const aiAssist = new AiAssist()

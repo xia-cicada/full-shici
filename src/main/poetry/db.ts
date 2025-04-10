@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { Category, PaginatedSearchResult, Poetry, SearchOptions, SearchResult } from './types'
 import poetryDBPath from '../../../resources/poetry.sqlite?asset&asarUnpack'
 
+/**古诗词的数据库基本不会变化，和用户数据库区分开来 */
 class PoetryDB {
   private db: Database.Database
 

@@ -1,3 +1,4 @@
+import { ModelConfig } from '../main/ai/types'
 import {
   Category,
   Poetry,
@@ -35,7 +36,14 @@ export interface PoetryDBAPI {
 }
 
 export interface aiAPI {
-  analyzePoetry: (poetry: Poetry) => Promise<PoetryAnalysis>
+  analyzePoetry: (poetry: Poetry) => Promise<PoetryAnalysis | null>
+  addModelConfig: (config: ModelConfig) => Promise<ModelConfig>
+  updateModelConfig: (id: number, config: Partial<ModelConfig>) => Promise<ModelConfig | null>
+  getAllModelConfigs: () => Promise<ModelConfig[]>
+  getModelConfigById: (id: number) => Promise<ModelConfig | null>
+  getModelConfigByName: (name: string) => Promise<ModelConfig | null>
+  getDefaultModelConfig: () => Promise<ModelConfig | null>
+  deleteModelConfig: (id: number) => Promise<boolean>
 }
 
 export interface ExposedApi {

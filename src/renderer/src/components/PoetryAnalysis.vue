@@ -38,7 +38,10 @@
 
         <!-- 错误提示 -->
         <n-alert v-if="error" type="error" class="mt-4">
-          {{ error }}
+          <n-flex>
+            <span>{{ error }}</span>
+            <n-button type="primary" text @click="handleConfigModel()">配置</n-button>
+          </n-flex>
         </n-alert>
       </n-card>
     </n-spin>
@@ -47,7 +50,7 @@
 
 <script lang="ts" setup>
 import { toDeepRaw } from '@/utils'
-import { Poetry, PoetryAnalysis } from '@main/db/types'
+import { Poetry, PoetryAnalysis } from '@main/poetry/types'
 import { poetryHighlight } from './poetry-highlight'
 
 const props = defineProps<{
@@ -56,7 +59,12 @@ const props = defineProps<{
 
 const loading = ref(true)
 const error = ref('')
-const analysisResult = ref<PoetryAnalysis>()
+const analysisResult = ref<PoetryAnalysis | null>()
+
+const router = useRouter()
+const handleConfigModel = () => {
+  router.push({ path: 'model-config' })
+}
 
 let cleanHighlight: Function
 onMounted(async () => {
@@ -65,7 +73,9 @@ onMounted(async () => {
     const result = await window.electronAPI.ai.analyzePoetry(toDeepRaw(props.poetry))
 
     analysisResult.value = result
-    cleanHighlight = poetryHighlight(result.vocabularyNotes)
+    if (result) {
+      cleanHighlight = poetryHighlight(result.vocabularyNotes)
+    }
   } catch (err) {
     error.value = `分析失败: ${err instanceof Error ? err.message : String(err)}`
     console.error('AI分析错误:', err)

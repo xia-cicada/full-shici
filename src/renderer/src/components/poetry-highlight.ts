@@ -1,4 +1,4 @@
-import { VocabularyNote } from '@main/db/types'
+import { VocabularyNote } from '@main/poetry/types'
 import { escape, escapeRegExp } from 'es-toolkit'
 
 export const poetryHighlight = (

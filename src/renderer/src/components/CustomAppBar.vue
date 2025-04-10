@@ -2,6 +2,9 @@
   <n-el class="flex justify-end overflow-hidden text-[var(--text-color)] bg-[var(--card-color)]">
     <div class="flex-1" style="app-region: drag"></div>
     <div>
+      <n-button quaternary @click="configAI()">
+        <i class="i-tabler-brand-adobe-illustrator"></i>
+      </n-button>
       <n-button quaternary @click="toggleDark()">
         <i class="i-tabler-sun-filled" v-if="isDark"></i>
         <i class="i-tabler-moon-filled" v-else></i>
@@ -27,6 +30,11 @@ const { isDark, toggleDark } = useNaiveTheme()
 const { minimize, toggleMaximize, close, onMaximized, onUnmaximized } = window.electronAPI
 
 const isMaximized = ref(false)
+
+const router = useRouter()
+const configAI = () => {
+  router.push({ path: 'model-config' })
+}
 
 // 监听窗口状态变化
 onMounted(() => {

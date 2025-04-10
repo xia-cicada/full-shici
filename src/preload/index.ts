@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { ExposedApi } from './types'
+import { ModelConfig } from '../main/ai/types'
 
 // Custom APIs for renderer
 const electronAPI: ExposedApi = {
@@ -40,7 +41,15 @@ const electronAPI: ExposedApi = {
   },
 
   ai: {
-    analyzePoetry: (poetry) => ipcRenderer.invoke('ai-analyze-poetry', poetry)
+    analyzePoetry: (poetry) => ipcRenderer.invoke('ai-analyze-poetry', poetry),
+    addModelConfig: (config: ModelConfig) => ipcRenderer.invoke('ai-add-model-config', config),
+    updateModelConfig: (id: number, config: Partial<ModelConfig>) =>
+      ipcRenderer.invoke('ai-update-model-config', id, config),
+    getAllModelConfigs: () => ipcRenderer.invoke('ai-get-all-model-configs'),
+    getModelConfigById: (id: number) => ipcRenderer.invoke('ai-get-model-config-by-id', id),
+    getModelConfigByName: (name: string) => ipcRenderer.invoke('ai-get-model-config-by-name', name),
+    getDefaultModelConfig: () => ipcRenderer.invoke('ai-get-default-model-config'),
+    deleteModelConfig: (id: number) => ipcRenderer.invoke('ai-delete-model-config', id)
   }
 }
 

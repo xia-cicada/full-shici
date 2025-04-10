@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Poetry } from '@main/db/types'
+import type { Poetry } from '@main/poetry/types'
 
 const router = useRouter()
 const message = useMessage()

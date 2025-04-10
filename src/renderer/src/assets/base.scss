@@ -23,6 +23,18 @@ body {
   font-family: LXGWWenKai, serif;
 }
 
+body {
+  transition:
+    color 0.2s ease-in-out,
+    background-color 0.2s ease-in-out;
+  color: #333639;
+  background-color: #fff;
+  &[theme='dark'] {
+    background-color: #161616;
+    color: #ffffffd1;
+  }
+}
+
 .all-center {
   --at-apply: flex items-center justify-center;
 }

@@ -1,5 +1,5 @@
 <template>
-  <n-layout class="h-full overflow-hidden grid grid-rows-[min-content_1fr]" id="poetry-detail">
+  <n-layout class="h-full overflow-hidden grid grid-rows-[min-content_1fr]">
     <!-- 头部 -->
     <n-layout-header class="flex items-center gap-3 px-6" style="height: 50px">
       <n-button quaternary @click="router.back()">
@@ -19,31 +19,25 @@
         <template v-else-if="poetry">
           <!-- 作者信息 -->
           <n-scrollbar>
-            <div class="mb-8">
-              <n-text class="text-lg font-bold">{{ poetry.author }}</n-text>
-              <n-text depth="3" class="block text-sm">{{ poetry.category_name }}</n-text>
-            </div>
+            <div id="poetry-area">
+              <div class="mb-8">
+                <n-text class="text-lg font-bold">{{ poetry.author }}</n-text>
+                <n-text depth="3" class="block text-sm">{{ poetry.category_name }}</n-text>
+              </div>
 
-            <!-- 诗词内容 -->
-            <div class="poetry-content mb-8 pr-3">
-              <n-h2 class="text-2xl mb-6">{{ poetry.title }}</n-h2>
+              <!-- 诗词内容 -->
+              <div class="poetry-content mb-8 pr-3">
+                <n-h2 class="text-2xl mb-6">{{ poetry.title }}</n-h2>
 
-              <div v-for="(para, index) in poetry.paragraphs" :key="index" class="mb-4">
-                <p class="text-lg">{{ para }}</p>
+                <div v-for="(para, index) in poetry.paragraphs" :key="index" class="mb-4">
+                  <p class="text-lg">{{ para }}</p>
+                </div>
               </div>
             </div>
 
             <!-- 附加信息 -->
             <div class="pr-2">
-              <n-collapse arrow-placement="right" :expanded-names="['notes', 'tags']">
-                <n-collapse-item title="注释" name="notes" v-if="poetry.notes.length">
-                  <ul class="list-disc pl-6 space-y-2">
-                    <li v-for="(note, i) in poetry.notes" :key="i">
-                      <n-p>{{ note }}</n-p>
-                    </li>
-                  </ul>
-                </n-collapse-item>
-
+              <n-collapse arrow-placement="right" :default-expanded-names="['tags']">
                 <n-collapse-item title="标签" name="tags" v-if="poetry.tags.length">
                   <div class="flex flex-wrap gap-2">
                     <n-tag v-for="(tag, i) in poetry.tags" :key="i" type="primary" size="small">

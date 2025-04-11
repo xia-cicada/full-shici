@@ -13,7 +13,7 @@
         <div class="flex flex-col gap-2" v-if="analysisResult">
           <n-card name="vocabulary" title="词汇注释" hoverable>
             <n-list>
-              <n-list-item v-for="(note, index) in analysisResult.vocabularyNotes" :key="index">
+              <n-list-item v-for="(note, index) in vocabularyNotes" :key="index">
                 <n-thing :title="note.word" :description="note.explanation" />
               </n-list-item>
             </n-list>
@@ -49,8 +49,8 @@
 </template>
 
 <script lang="ts" setup>
-import { toDeepRaw } from '@/utils'
-import { Poetry, PoetryAnalysis } from '@main/poetry/types'
+import { parsePoetryNote, toDeepRaw } from '@/utils'
+import { Poetry, PoetryAnalysis, VocabularyNote } from '@main/poetry/types'
 import { poetryHighlight } from './poetry-highlight'
 
 const props = defineProps<{
@@ -67,14 +67,21 @@ const handleConfigModel = () => {
 }
 
 let cleanHighlight: Function
+const vocabularyNotes = ref<VocabularyNote[]>([])
 onMounted(async () => {
   try {
     cleanHighlight?.()
     const result = await window.electronAPI.ai.analyzePoetry(toDeepRaw(props.poetry))
 
     analysisResult.value = result
+    const notes = (props.poetry.notes || []).map((d) => parsePoetryNote(d))
     if (result) {
-      cleanHighlight = poetryHighlight(result.vocabularyNotes)
+      for (const t of result.vocabularyNotes) {
+        if (notes.find((d) => d.word === t.word)) continue
+        notes.push(t)
+      }
+      vocabularyNotes.value = notes
+      cleanHighlight = poetryHighlight(vocabularyNotes.value)
     }
   } catch (err) {
     error.value = `分析失败: ${err instanceof Error ? err.message : String(err)}`

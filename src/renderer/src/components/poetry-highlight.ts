@@ -7,7 +7,7 @@ const TOOLTIP_CLASS = 'vocabulary-tooltip'
 
 export const poetryHighlight = (
   notes: VocabularyNote[],
-  rootEl: HTMLElement = document.getElementById('poetry-detail')!
+  rootEl: HTMLElement = document.getElementById('poetry-area')!
 ) => {
   if (!rootEl) return () => {}
 
@@ -43,13 +43,26 @@ export const poetryHighlight = (
     const parent = textNode.parentElement
     if (!parent) return
 
+    // 第一步：用临时UUID标记替换所有目标词
+    const tempMarkers = new Map()
     notes.forEach((note) => {
       const { word, explanation } = note
       const regex = new RegExp(escapeRegExp(word), 'g')
+      content = content.replace(regex, (match) => {
+        const marker = `__TEMP_${crypto.randomUUID()}__`
+        tempMarkers.set(marker, {
+          match,
+          explanation: escape(explanation)
+        })
+        return marker
+      })
+    })
+
+    // 第二步：将临时标记替换为最终的HTML
+    tempMarkers.forEach((value, marker) => {
       content = content.replace(
-        regex,
-        (match) =>
-          `<span class="${HIGHLIGHT_CLASS}" data-explanation="${escape(explanation)}">${match}</span>`
+        marker,
+        `<span class="${HIGHLIGHT_CLASS}" data-explanation="${value.explanation}">${value.match}</span>`
       )
     })
 

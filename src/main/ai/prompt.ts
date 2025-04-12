@@ -22,9 +22,9 @@ export function generateAnalysisPrompt(request: Poetry): string {
       {"word": "难词1", "explanation": "解释"},
       {"word": "难词2", "explanation": "解释"}
     ],
-    "contentAnalysis": "内容分析（50-100字）",
+    "contentAnalysis": "内容分析，包含诗人写诗的背景",
     "artisticFeatures": ["特色1", "特色2"],
-    "emotionalExpression": "情感表达（30-50字）"
+    "emotionalExpression": "情感表达"
   }
   `
 }

@@ -4,7 +4,7 @@
   "description": "全唐诗、全宋诗、全宋词",
   "main": "./out/main/index.js",
   "author": "xia-cicada",
-  "homepage": "https://github.com/xia-cicada/full-shici",
+  "homepage": "https://xia-cicada.github.io/full-shici/",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",

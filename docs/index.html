@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>全诗词 - 免费诗词查询工具</title>
+    <style>
+      :root {
+        --primary-color: #4a6baf;
+        --secondary-color: #6c757d;
+        --bg-color: #ffffff;
+        --text-color: #333333;
+        --card-bg: #f8f9fa;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #121212;
+          --text-color: #e0e0e0;
+          --card-bg: #1e1e1e;
+        }
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.6;
+        color: var(--text-color);
+        background-color: var(--bg-color);
+        margin: 0;
+        padding: 0;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      h1 {
+        color: var(--primary-color);
+        margin-bottom: 10px;
+      }
+      img {
+        display: block;
+        max-width: 100%;
+        border-radius: 5px;
+      }
+      .subtitle {
+        color: var(--secondary-color);
+        font-size: 1.1rem;
+      }
+      .card {
+        background-color: var(--card-bg);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+      h2 {
+        color: var(--primary-color);
+        margin-top: 0;
+        font-size: 1.3rem;
+      }
+      .data-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+        margin: 15px 0;
+      }
+      .data-item {
+        text-align: center;
+        padding: 10px;
+        background-color: rgba(74, 107, 175, 0.1);
+        border-radius: 5px;
+      }
+      .data-count {
+        font-weight: bold;
+        font-size: 1.2rem;
+        color: var(--primary-color);
+      }
+      .feature-list {
+        padding-left: 20px;
+      }
+      .note {
+        font-size: 0.9rem;
+        color: var(--secondary-color);
+        margin-top: 30px;
+        padding-top: 15px;
+        border-top: 1px solid #ddd;
+      }
+      .download-btn {
+        display: block;
+        background-color: var(--primary-color);
+        color: white;
+        text-align: center;
+        padding: 12px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: bold;
+        margin: 25px auto;
+        max-width: 300px;
+        transition: background-color 0.3s;
+      }
+      .download-btn:hover {
+        background-color: #3a5a8f;
+      }
+      @media (max-width: 600px) {
+        .data-grid {
+          grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        }
+        body {
+          padding: 15px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>全诗词</h1>
+      <p class="subtitle">免费诗词查询 & AI赏析工具</p>
+    </header>
+
+    <div class="card">
+      <h2>诗词数据库</h2>
+      <p>收录参见分类的超过34万首诗词作品：</p>
+      <div class="data-grid">
+        <div class="data-item">
+          <div class="data-name">唐诗/宋诗</div>
+          <div class="data-count">311855</div>
+        </div>
+        <div class="data-item">
+          <div class="data-name">宋词</div>
+          <div class="data-count">21053</div>
+        </div>
+        <div class="data-item">
+          <div class="data-name">元曲</div>
+          <div class="data-count">11057</div>
+        </div>
+        <div class="data-item">
+          <div class="data-name">诗经</div>
+          <div class="data-count">305</div>
+        </div>
+        <div class="data-item">
+          <div class="data-name">楚辞</div>
+          <div class="data-count">65</div>
+        </div>
+        <div class="data-item">
+          <div class="data-name">五代诗词</div>
+          <div class="data-count">542</div>
+        </div>
+        <div class="data-item">
+          <div class="data-name">论语</div>
+          <div class="data-count">20</div>
+        </div>
+        <div class="data-item">
+          <div class="data-name">曹操诗集</div>
+          <div class="data-count">26</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>搜索功能</h2>
+      <ul class="feature-list">
+        <li>基于SQLite FTS5实现快速检索</li>
+        <li>支持按<strong>标题、作者</strong>搜索</li>
+        <li><em>暂不支持诗句内容搜索</em></li>
+      </ul>
+
+      <img src="./images/sull-shici-query.png" alt="" />
+      <p>支持拼音首字母搜索</p>
+      <img src="./images/sull-shici-query-pinyin.png" alt="" />
+    </div>
+
+    <div class="card">
+      <h2>AI赏析功能</h2>
+      <ul class="feature-list">
+        <li>提供词汇注释、内容解析</li>
+        <li>分析情感表达和艺术特色</li>
+        <li>可自定义AI解析风格</li>
+        <li>支持配置自己的AI模型</li>
+      </ul>
+
+      <img src="./images/full-shici-detail-2.png" alt="" />
+      <p>自定义配置AI</p>
+      <img src="./images/full-shici-ai-config-2.png" alt="" />
+    </div>
+
+    <div class="card">
+      <h2>其他特性</h2>
+      <ul class="feature-list">
+        <li>亮色/暗色主题切换</li>
+        <li>简洁无广告界面</li>
+        <li>完全免费使用</li>
+      </ul>
+
+      <img src="./images/full-shici-dark-mode-2.png" alt="" />
+      <br />
+      <img src="./images/full-shici-dark-mode.png" alt="" />
+    </div>
+
+    <div class="note">
+      <div>注意：</div>
+      <ol>
+        <li>部分诗词仅提供繁体版本，暂未完全校对。</li>
+        <li>这是一个功能纯粹的个人项目，还处于开发之中，适合诗词爱好者随手查阅。</li>
+        <li>软件暂时支持Windows版本下载，其它版本可以自行编译下载。</li>
+      </ol>
+    </div>
+
+    <a href="#" class="download-btn">下载/使用全诗词</a>
+  </body>
+</html>

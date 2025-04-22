@@ -24,7 +24,7 @@ class PoetryDB {
 
   // 获取所有分类
   getAllCategories(): Category[] {
-    const stmt = this.db.prepare('SELECT * FROM categories ORDER BY name')
+    const stmt = this.db.prepare('SELECT * FROM categories ORDER BY id')
     return stmt.all() as Category[]
   }
 

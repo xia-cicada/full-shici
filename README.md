@@ -2,10 +2,6 @@
 
 全诗词，包含全唐诗、全宋诗和全宋词。
 
-## Recommended IDE Setup
-
-- [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
-
 ## Project Setup
 
 ### Install
@@ -21,6 +17,8 @@ $ pnpm dev
 ```
 
 ### Build
+
+> 在打包之前，需要先参考[数据库准备](./docs/build-sql/README.md)来生成poetry.sqlite文件。
 
 ```bash
 # For windows

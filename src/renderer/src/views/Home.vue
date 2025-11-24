@@ -21,6 +21,7 @@ interface Category {
 const searchKeyword = ref('')
 const selectedCategory = ref<number | null>(null)
 const selectedTag = ref<number | null>(null)
+const showFavoritesOnly = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
 const totalItems = ref(0)
@@ -122,6 +123,12 @@ const searchPoetry = async (toResetPage = false) => {
     if (toResetPage) currentPage.value = 1
     isLoading.value = true
 
+    // 如果选择了只看收藏，则按收藏查询
+    if (showFavoritesOnly.value) {
+      await searchByFavorites()
+      return
+    }
+
     // 如果选择了标签，则按标签查询
     if (selectedTag.value) {
       await searchByTag()
@@ -155,6 +162,63 @@ const searchPoetry = async (toResetPage = false) => {
   }
 }
 
+// 按收藏搜索诗词
+const searchByFavorites = async () => {
+  try {
+    isLoading.value = true
+
+    // 获取所有收藏的诗词ID
+    const bookmarks = await window.electronAPI.interaction.getAllBookmarks('favorite')
+    const favoriteIds = bookmarks.map((b) => b.poetry_id)
+
+    if (favoriteIds.length === 0) {
+      poetryList.value = []
+      totalItems.value = 0
+      return
+    }
+
+    // 批量查询诗词详情
+    const allPoetries = await Promise.all(
+      favoriteIds.map((id) => window.electronAPI.db.getPoetryById(id))
+    )
+
+    // 过滤掉 null 结果
+    let filteredPoetries = allPoetries.filter((p) => p !== null) as PoetryRow[]
+
+    // 应用分类过滤
+    if (selectedCategory.value) {
+      filteredPoetries = filteredPoetries.filter((p) => p.category_id === selectedCategory.value)
+    }
+
+    // 应用关键词过滤
+    if (searchKeyword.value.trim()) {
+      const keyword = searchKeyword.value.toLowerCase()
+      filteredPoetries = filteredPoetries.filter(
+        (p) =>
+          p.title.toLowerCase().includes(keyword) ||
+          p.author.toLowerCase().includes(keyword) ||
+          (p.rhythmic && p.rhythmic.toLowerCase().includes(keyword)) ||
+          p.paragraphs.some((para) => para.toLowerCase().includes(keyword))
+      )
+    }
+
+    // 分页
+    totalItems.value = filteredPoetries.length
+    const start = (currentPage.value - 1) * pageSize.value
+    const end = start + pageSize.value
+    poetryList.value = filteredPoetries.slice(start, end)
+
+    // 加载收藏状态（都是已收藏的）
+    await loadBookmarkStatus()
+  } catch (error) {
+    console.error('按收藏搜索失败:', error)
+    poetryList.value = []
+    totalItems.value = 0
+  } finally {
+    isLoading.value = false
+  }
+}
+
 // 按标签搜索诗词
 const searchByTag = async () => {
   if (!selectedTag.value) return
@@ -163,7 +227,24 @@ const searchByTag = async () => {
     isLoading.value = true
 
     // 获取标签下的所有诗词ID
-    const poetries = await interactionStore.getPoetriesByTag(selectedTag.value)
+    let poetries = await interactionStore.getPoetriesByTag(selectedTag.value)
+
+    // 应用分类过滤
+    if (selectedCategory.value) {
+      poetries = poetries.filter((p: any) => p.category_id === selectedCategory.value)
+    }
+
+    // 应用关键词过滤
+    if (searchKeyword.value.trim()) {
+      const keyword = searchKeyword.value.toLowerCase()
+      poetries = poetries.filter(
+        (p: any) =>
+          p.title.toLowerCase().includes(keyword) ||
+          p.author.toLowerCase().includes(keyword) ||
+          (p.rhythmic && p.rhythmic.toLowerCase().includes(keyword)) ||
+          p.paragraphs.some((para: string) => para.toLowerCase().includes(keyword))
+      )
+    }
 
     // 分页
     totalItems.value = poetries.length
@@ -198,6 +279,7 @@ const resetSearch = () => {
   searchKeyword.value = ''
   selectedCategory.value = null
   selectedTag.value = null
+  showFavoritesOnly.value = false
   searchPoetry(true)
 }
 
@@ -205,6 +287,11 @@ const resetSearch = () => {
 const viewDetail = (id: number) => {
   router.push({ path: '/detail', query: { id } })
 }
+
+// 监听筛选条件变化，自动触发搜索
+watch([selectedCategory, selectedTag, showFavoritesOnly], () => {
+  searchPoetry(true)
+})
 
 // 初始化加载数据
 onMounted(() => {
@@ -216,7 +303,7 @@ onMounted(() => {
 
 <template>
   <main class="overflow-hidden grid grid-rows-[auto_1fr] p-1">
-    <n-flex class="p-3">
+    <n-flex class="p-3" align="center">
       <n-input
         v-model:value="searchKeyword"
         placeholder="输入关键词搜索"
@@ -238,6 +325,20 @@ onMounted(() => {
         clearable
         style="width: 150px"
       />
+      <n-switch v-model:value="showFavoritesOnly">
+        <template #checked>
+          <n-flex align="center" :size="4">
+            <div class="i-tabler-heart-filled" />
+            <span>只看收藏</span>
+          </n-flex>
+        </template>
+        <template #unchecked>
+          <n-flex align="center" :size="4">
+            <div class="i-tabler-heart" />
+            <span>全部</span>
+          </n-flex>
+        </template>
+      </n-switch>
       <n-button type="primary" @click="searchPoetry(true)">
         <template #icon>
           <div class="i-tabler-search" />
@@ -271,7 +372,7 @@ onMounted(() => {
         @update:page-size="
           (size) => {
             pageSize = size
-            searchPoetry()
+            searchPoetry(true)
           }
         "
       />

@@ -75,9 +75,12 @@ export function setupInteractionDatabaseIPC() {
   })
 
   // ========== 标签相关IPC ==========
-  ipcMain.handle('interaction-create-tag', (_, params: Omit<Tag, 'id'>) => {
-    return interactionDB.createTag(params)
-  })
+  ipcMain.handle(
+    'interaction-create-tag',
+    (_, params: Omit<Tag, 'id' | 'created_at' | 'updated_at'>) => {
+      return interactionDB.createTag(params)
+    }
+  )
 
   ipcMain.handle('interaction-get-all-tags', () => {
     return interactionDB.getAllTags()

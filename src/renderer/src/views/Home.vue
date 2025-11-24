@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { getPy } from '@/utils'
 import { DataTableColumns, NButton, NTag } from 'naive-ui'
+import { useInteractionStore } from '@/stores/interaction'
+import BookmarkButton from '@/components/BookmarkButton.vue'
 
 interface PoetryRow {
   id: number
@@ -18,6 +20,7 @@ interface Category {
 
 const searchKeyword = ref('')
 const selectedCategory = ref<number | null>(null)
+const selectedTag = ref<number | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(10)
 const totalItems = ref(0)
@@ -26,9 +29,30 @@ const poetryList = ref<PoetryRow[]>([])
 const categories = ref<Category[]>([])
 
 const router = useRouter()
+const interactionStore = useInteractionStore()
+
+// 收藏状态缓存 (用于当前页的快速显示)
+const bookmarkStatus = ref<Map<number, boolean>>(new Map())
+
+// 用户标签列表
+const userTags = computed(() => interactionStore.tags)
 
 // 表头配置
 const columns: DataTableColumns<PoetryRow> = [
+  {
+    title: '',
+    key: 'bookmark',
+    width: 50,
+    render: (row) => {
+      const isBookmarked = bookmarkStatus.value.get(row.id) || false
+      return h('div', { class: 'flex justify-center' }, [
+        h('div', {
+          class: isBookmarked ? 'i-tabler-heart-filled text-red-500' : 'i-tabler-heart text-gray-400',
+          style: { fontSize: '18px' }
+        })
+      ])
+    }
+  },
   {
     title: '标题',
     key: 'title',
@@ -61,17 +85,25 @@ const columns: DataTableColumns<PoetryRow> = [
   {
     title: '操作',
     key: 'actions',
-    width: 100,
+    width: 150,
     render: (row) =>
-      h(
-        NButton,
-        {
+      h('div', { class: 'flex gap-2' }, [
+        h(BookmarkButton, {
+          poetryId: row.id,
           size: 'small',
-          type: 'primary',
-          onClick: () => viewDetail(row.id)
-        },
-        () => '详情'
-      )
+          type: 'icon',
+          onBookmarkChanged: () => loadBookmarkStatus()
+        }),
+        h(
+          NButton,
+          {
+            size: 'small',
+            type: 'primary',
+            onClick: () => viewDetail(row.id)
+          },
+          () => '详情'
+        )
+      ])
   }
 ]
 
@@ -89,6 +121,13 @@ const searchPoetry = async (toResetPage = false) => {
   try {
     if (toResetPage) currentPage.value = 1
     isLoading.value = true
+
+    // 如果选择了标签，则按标签查询
+    if (selectedTag.value) {
+      await searchByTag()
+      return
+    }
+
     const options = {
       keyword: searchKeyword.value,
       categoryId: selectedCategory.value || undefined,
@@ -104,6 +143,9 @@ const searchPoetry = async (toResetPage = false) => {
 
     poetryList.value = results as PoetryRow[]
     totalItems.value = total as number
+
+    // 加载收藏状态
+    await loadBookmarkStatus()
   } catch (error) {
     console.error('搜索失败:', error)
     poetryList.value = []
@@ -113,21 +155,61 @@ const searchPoetry = async (toResetPage = false) => {
   }
 }
 
-// 查看详情
-const viewDetail = (id: number) => {
-  router.push({ path: '/detail', query: { id } })
+// 按标签搜索诗词
+const searchByTag = async () => {
+  if (!selectedTag.value) return
+
+  try {
+    isLoading.value = true
+
+    // 获取标签下的所有诗词ID
+    const poetries = await interactionStore.getPoetriesByTag(selectedTag.value)
+
+    // 分页
+    totalItems.value = poetries.length
+    const start = (currentPage.value - 1) * pageSize.value
+    const end = start + pageSize.value
+    const pagePoetries = poetries.slice(start, end)
+
+    poetryList.value = pagePoetries as PoetryRow[]
+
+    // 加载收藏状态
+    await loadBookmarkStatus()
+  } catch (error) {
+    console.error('按标签搜索失败:', error)
+    poetryList.value = []
+    totalItems.value = 0
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 加载收藏状态
+const loadBookmarkStatus = async () => {
+  if (poetryList.value.length === 0) return
+
+  const poetryIds = poetryList.value.map((p) => p.id)
+  const statuses = await interactionStore.batchCheckBookmarks(poetryIds)
+  bookmarkStatus.value = statuses
 }
 
 // 重置搜索
 const resetSearch = () => {
   searchKeyword.value = ''
   selectedCategory.value = null
+  selectedTag.value = null
   searchPoetry(true)
+}
+
+// 查看详情
+const viewDetail = (id: number) => {
+  router.push({ path: '/detail', query: { id } })
 }
 
 // 初始化加载数据
 onMounted(() => {
   loadCategories()
+  interactionStore.loadTags() // 加载用户标签
   searchPoetry(true)
 })
 </script>
@@ -147,7 +229,14 @@ onMounted(() => {
         :options="categories.map((c) => ({ label: c.name, value: c.id }))"
         placeholder="选择分类"
         clearable
-        style="width: 200px"
+        style="width: 150px"
+      />
+      <n-select
+        v-model:value="selectedTag"
+        :options="userTags.map((t) => ({ label: t.name, value: t.id }))"
+        placeholder="选择标签"
+        clearable
+        style="width: 150px"
       />
       <n-button type="primary" @click="searchPoetry(true)">
         <template #icon>

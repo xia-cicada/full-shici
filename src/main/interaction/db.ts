@@ -11,8 +11,18 @@ export class InteractionDB {
 
   initTable() {
     const migrationScript = `
+    -- 禁用外键检查（用于重建表）
+    PRAGMA foreign_keys = OFF;
+
+    -- 删除旧表（如果存在）
+    DROP TABLE IF EXISTS annotation;
+    DROP TABLE IF EXISTS note;
+    DROP TABLE IF EXISTS bookmark;
+    DROP TABLE IF EXISTS poetry_tag;
+    DROP TABLE IF EXISTS tag;
+
     -- 注解表（基于诗句数组定位）
-    CREATE TABLE IF NOT EXISTS annotation (
+    CREATE TABLE annotation (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       poetry_id INTEGER NOT NULL,     -- 关联的诗词ID
       verse_index INTEGER NOT NULL,   -- 第几句，第0句表示标题
@@ -20,55 +30,60 @@ export class InteractionDB {
       end_pos INTEGER NOT NULL,       -- 该句中的结束位置
       content TEXT NOT NULL,          -- 注解内容
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (poetry_id) REFERENCES poetry(id) ON DELETE CASCADE
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     -- 笔记表
-    CREATE TABLE IF NOT EXISTS note (
+    CREATE TABLE note (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       poetry_id INTEGER NOT NULL,     -- 关联的诗词ID
       title TEXT,                     -- 笔记标题
       content TEXT NOT NULL,          -- 笔记内容
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (poetry_id) REFERENCES poetry(id) ON DELETE CASCADE
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     -- 标记表（收藏、点赞等）
-    CREATE TABLE IF NOT EXISTS bookmark (
+    CREATE TABLE bookmark (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       poetry_id INTEGER NOT NULL,     -- 关联的诗词ID
       type TEXT NOT NULL,             -- 标记类型（收藏，点赞等）
       data TEXT,                      -- 额外数据
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (poetry_id) REFERENCES poetry(id) ON DELETE CASCADE,
       UNIQUE(poetry_id, type)         -- 防止重复标记
     );
 
     -- 标签表
-    CREATE TABLE IF NOT EXISTS tag (
+    CREATE TABLE tag (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,      -- 标签名称
-      color TEXT                      -- 标签颜色
+      color TEXT,                     -- 标签颜色
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     -- 诗词-标签关联表
-    CREATE TABLE IF NOT EXISTS poetry_tag (
+    CREATE TABLE poetry_tag (
       poetry_id INTEGER NOT NULL,     -- 关联的诗词ID
       tag_id INTEGER NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (poetry_id, tag_id),
-      FOREIGN KEY (poetry_id) REFERENCES poetry(id) ON DELETE CASCADE,
       FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
     );
 
     -- 创建索引提高查询性能
-    CREATE INDEX IF NOT EXISTS idx_annotation_poetry_id ON annotation(poetry_id);
-    CREATE INDEX IF NOT EXISTS idx_note_poetry_id ON note(poetry_id);
-    CREATE INDEX IF NOT EXISTS idx_bookmark_poetry_id ON bookmark(poetry_id);
+    CREATE INDEX idx_annotation_poetry_id ON annotation(poetry_id);
+    CREATE INDEX idx_note_poetry_id ON note(poetry_id);
+    CREATE INDEX idx_bookmark_poetry_id ON bookmark(poetry_id);
+    CREATE INDEX idx_bookmark_type ON bookmark(type);
+    CREATE INDEX idx_poetry_tag_poetry_id ON poetry_tag(poetry_id);
+    CREATE INDEX idx_poetry_tag_tag_id ON poetry_tag(tag_id);
+
+    -- 重新启用外键检查
+    PRAGMA foreign_keys = ON;
     `
 
-    this.userData.migrate(2, migrationScript)
+    this.userData.migrate(3, migrationScript)
   }
 
   // ========== 注解相关方法 ==========
@@ -199,26 +214,34 @@ export class InteractionDB {
 
   // ========== 标签相关方法 ==========
 
-  createTag(params: Omit<Tag, 'id'>) {
+  createTag(params: Omit<Tag, 'id' | 'created_at' | 'updated_at'>): Tag {
     const stmt = this.db.prepare(`
       INSERT INTO tag (name, color)
       VALUES (?, ?)
     `)
-    return stmt.run(params.name, params.color)
+    const result = stmt.run(params.name, params.color)
+
+    // 查询并返回完整的 Tag 对象
+    const selectStmt = this.db.prepare(`SELECT * FROM tag WHERE id = ?`)
+    return selectStmt.get(result.lastInsertRowid) as Tag
   }
 
-  getAllTags() {
+  getAllTags(): Tag[] {
     const stmt = this.db.prepare(`SELECT * FROM tag ORDER BY name`)
-    return stmt.all()
+    return stmt.all() as Tag[]
   }
 
-  updateTag(params: Pick<Tag, 'id' | 'name' | 'color'>) {
+  updateTag(params: Pick<Tag, 'id' | 'name' | 'color'>): Tag {
     const stmt = this.db.prepare(`
       UPDATE tag
-      SET name = ?, color = ?
+      SET name = ?, color = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `)
-    return stmt.run(params.name, params.color, params.id)
+    stmt.run(params.name, params.color, params.id)
+
+    // 查询并返回更新后的 Tag 对象
+    const selectStmt = this.db.prepare(`SELECT * FROM tag WHERE id = ?`)
+    return selectStmt.get(params.id) as Tag
   }
 
   deleteTag(id: number) {
@@ -247,14 +270,14 @@ export class InteractionDB {
     return stmt.all(poetryId)
   }
 
-  getPoetriesByTag(tagId: number) {
+  getPoetriesByTag(tagId: number): number[] {
     const stmt = this.db.prepare(`
-      SELECT p.* FROM poetry p
-      JOIN poetry_tag pt ON p.id = pt.poetry_id
-      WHERE pt.tag_id = ?
-      ORDER BY p.title
+      SELECT poetry_id FROM poetry_tag
+      WHERE tag_id = ?
+      ORDER BY poetry_id
     `)
-    return stmt.all(tagId)
+    const results = stmt.all(tagId) as Array<{ poetry_id: number }>
+    return results.map((r) => r.poetry_id)
   }
 
   removeTagFromPoetry(poetryId: number, tagId: number) {

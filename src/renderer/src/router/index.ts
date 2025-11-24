@@ -4,6 +4,8 @@ import Home from '@/views/Home.vue'
 import About from '@/views/About.vue'
 import Detail from '@/views/Detail.vue'
 import ModelConfig from '@/views/ModelConfig.vue'
+import Favorites from '@/views/Favorites.vue'
+import Tags from '@/views/Tags.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -20,6 +22,16 @@ const routes: RouteRecordRaw[] = [
         path: 'detail',
         name: 'detail',
         component: Detail
+      },
+      {
+        path: 'favorites',
+        name: 'favorites',
+        component: Favorites
+      },
+      {
+        path: 'tags',
+        name: 'tags',
+        component: Tags
       },
       {
         path: 'model-config',

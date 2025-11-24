@@ -7,3 +7,4 @@ out
 **/auto-imports.d.ts
 **/components.d.ts
 resources/poetry.sqlite*
+.claude

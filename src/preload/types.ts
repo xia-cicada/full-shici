@@ -51,7 +51,7 @@ export interface InteractionAPI {
   // ========== 注解相关API ==========
   addAnnotation: (params: Omit<Annotation, 'id' | 'created_at' | 'updated_at'>) => Promise<number>
   getAnnotationsByPoetry: (poetryId: number) => Promise<Annotation[]>
-  getAnnotationsByVerse: (params: { poetryId: number; verseIndex: number }) => Promise<Annotation[]>
+  getAnnotationsByVerse: (params: { poetry_id: number; verse_index: number }) => Promise<Annotation[]>
   updateAnnotation: (params: Pick<Annotation, 'id' | 'content'>) => Promise<void>
   deleteAnnotation: (id: number) => Promise<void>
 
@@ -69,9 +69,9 @@ export interface InteractionAPI {
   removeBookmark: (params: { poetryId: number; type: string }) => Promise<void>
 
   // ========== 标签相关API ==========
-  createTag: (params: Omit<Tag, 'id'>) => Promise<number>
+  createTag: (params: Omit<Tag, 'id' | 'created_at' | 'updated_at'>) => Promise<Tag>
   getAllTags: () => Promise<Tag[]>
-  updateTag: (params: Pick<Tag, 'id' | 'name' | 'color'>) => Promise<void>
+  updateTag: (params: Pick<Tag, 'id' | 'name' | 'color'>) => Promise<Tag>
   deleteTag: (id: number) => Promise<void>
   addTagToPoetry: (params: { poetryId: number; tagId: number }) => Promise<void>
   getTagsByPoetry: (poetryId: number) => Promise<Tag[]>

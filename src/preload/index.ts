@@ -58,43 +58,34 @@ const electronAPI: ExposedApi = {
     getAnnotationsByPoetry: (poetryId) =>
       ipcRenderer.invoke('interaction-get-annotations-by-poetry', poetryId),
     getAnnotationsByVerse: (params) =>
-      ipcRenderer.invoke(
-        'interaction-get-annotations-by-verse',
-        params.poetryId,
-        params.verseIndex
-      ),
-    updateAnnotation: (params) =>
-      ipcRenderer.invoke('interaction-update-annotation', params.id, params.content),
+      ipcRenderer.invoke('interaction-get-annotations-by-verse', params),
+    updateAnnotation: (params) => ipcRenderer.invoke('interaction-update-annotation', params),
     deleteAnnotation: (id) => ipcRenderer.invoke('interaction-delete-annotation', id),
 
     // 笔记相关
     addNote: (note) => ipcRenderer.invoke('interaction-add-note', note),
     getNotesByPoetry: (poetryId) => ipcRenderer.invoke('interaction-get-notes-by-poetry', poetryId),
     getNote: (id) => ipcRenderer.invoke('interaction-get-note', id),
-    updateNote: (params) =>
-      ipcRenderer.invoke('interaction-update-note', params.id, params.title, params.content),
+    updateNote: (params) => ipcRenderer.invoke('interaction-update-note', params),
     deleteNote: (id) => ipcRenderer.invoke('interaction-delete-note', id),
 
     // 标记相关
     setBookmark: (bookmark) => ipcRenderer.invoke('interaction-set-bookmark', bookmark),
-    getBookmark: (params) =>
-      ipcRenderer.invoke('interaction-get-bookmark', params.poetryId, params.type),
+    getBookmark: (params) => ipcRenderer.invoke('interaction-get-bookmark', params),
     getAllBookmarks: (type) => ipcRenderer.invoke('interaction-get-all-bookmarks', type),
-    removeBookmark: (params) =>
-      ipcRenderer.invoke('interaction-remove-bookmark', params.poetryId, params.type),
+    removeBookmark: (params) => ipcRenderer.invoke('interaction-remove-bookmark', params),
 
     // 标签相关
-    createTag: (tag) => ipcRenderer.invoke('interaction-create-tag', tag),
+    createTag: (params) => ipcRenderer.invoke('interaction-create-tag', params),
     getAllTags: () => ipcRenderer.invoke('interaction-get-all-tags'),
-    updateTag: (params) =>
-      ipcRenderer.invoke('interaction-update-tag', params.id, params.name, params.color),
+    updateTag: (params) => ipcRenderer.invoke('interaction-update-tag', params),
     deleteTag: (id) => ipcRenderer.invoke('interaction-delete-tag', id),
     addTagToPoetry: (params) =>
-      ipcRenderer.invoke('interaction-add-tag-to-poetry', params.poetryId, params.tagId),
+      ipcRenderer.invoke('interaction-add-tag-to-poetry', params),
     getTagsByPoetry: (poetryId) => ipcRenderer.invoke('interaction-get-tags-by-poetry', poetryId),
     getPoetriesByTag: (tagId) => ipcRenderer.invoke('interaction-get-poetries-by-tag', tagId),
     removeTagFromPoetry: (params) =>
-      ipcRenderer.invoke('interaction-remove-tag-from-poetry', params.poetryId, params.tagId)
+      ipcRenderer.invoke('interaction-remove-tag-from-poetry', params)
   }
 }
 

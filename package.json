@@ -1,6 +1,6 @@
 {
   "name": "full-shici",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "全唐诗、全宋诗、全宋词",
   "main": "./out/main/index.js",
   "author": "xia-cicada",

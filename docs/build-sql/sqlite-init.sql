@@ -6,8 +6,8 @@ CREATE TABLE
     name_pinyin TEXT, -- 分类名称拼音（如 "tang shi song shi"）
     name_initials TEXT, -- 分类名称首字母（如 "tsss"）
     description TEXT, -- 分类描述
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
   );
 
 -- 创建诗词主表（带拼音字段）
@@ -28,8 +28,8 @@ CREATE TABLE
     notes TEXT DEFAULT '[]', -- 存储为JSON数组（注释/注解）
     tags TEXT DEFAULT '[]', -- 存储为JSON数组（标签）
     extra_info TEXT DEFAULT '{}', -- 存储其他特殊字段的JSON
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     -- 外键约束
     FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE RESTRICT,
     -- 确保category_id是有效的

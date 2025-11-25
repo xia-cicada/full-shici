@@ -30,10 +30,10 @@ export class UserData {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS db_version (
         version INTEGER PRIMARY KEY,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP NOT NULL
       );
 
-      INSERT INTO db_version (version) SELECT 0 WHERE NOT EXISTS (SELECT 1 FROM db_version);
+      INSERT INTO db_version (version, updated_at) SELECT 0, ${Date.now()} WHERE NOT EXISTS (SELECT 1 FROM db_version);
     `)
   }
 
@@ -44,11 +44,10 @@ export class UserData {
   public migrate(version: number, migrationScript: string): void {
     const currentVersion = this.getCurrentVersion()
     if (version > currentVersion) {
+      const now = Date.now()
       this.db.transaction(() => {
         this.db.exec(migrationScript)
-        this.db
-          .prepare('UPDATE db_version SET version = ?, updated_at = CURRENT_TIMESTAMP')
-          .run(version)
+        this.db.prepare('UPDATE db_version SET version = ?, updated_at = ?').run(version, now)
       })()
     }
   }

@@ -29,8 +29,8 @@ export class InteractionDB {
       start_pos INTEGER NOT NULL,     -- 该句中的起始位置
       end_pos INTEGER NOT NULL,       -- 该句中的结束位置
       content TEXT NOT NULL,          -- 注解内容
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL
     );
 
     -- 笔记表
@@ -39,8 +39,8 @@ export class InteractionDB {
       poetry_id INTEGER NOT NULL,     -- 关联的诗词ID
       title TEXT,                     -- 笔记标题
       content TEXT NOT NULL,          -- 笔记内容
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL
     );
 
     -- 标记表（收藏、点赞等）
@@ -49,7 +49,7 @@ export class InteractionDB {
       poetry_id INTEGER NOT NULL,     -- 关联的诗词ID
       type TEXT NOT NULL,             -- 标记类型（收藏，点赞等）
       data TEXT,                      -- 额外数据
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP NOT NULL,
       UNIQUE(poetry_id, type)         -- 防止重复标记
     );
 
@@ -58,15 +58,15 @@ export class InteractionDB {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,      -- 标签名称
       color TEXT,                     -- 标签颜色
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL
     );
 
     -- 诗词-标签关联表
     CREATE TABLE poetry_tag (
       poetry_id INTEGER NOT NULL,     -- 关联的诗词ID
       tag_id INTEGER NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP NOT NULL,
       PRIMARY KEY (poetry_id, tag_id),
       FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
     );
@@ -83,22 +83,25 @@ export class InteractionDB {
     PRAGMA foreign_keys = ON;
     `
 
-    this.userData.migrate(3, migrationScript)
+    this.userData.migrate(4, migrationScript)
   }
 
   // ========== 注解相关方法 ==========
 
   addAnnotation(params: Omit<Annotation, 'id' | 'created_at' | 'updated_at'>) {
+    const now = Date.now()
     const stmt = this.db.prepare(`
-      INSERT INTO annotation (poetry_id, verse_index, start_pos, end_pos, content)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO annotation (poetry_id, verse_index, start_pos, end_pos, content, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `)
     return stmt.run(
       params.poetry_id,
       params.verse_index,
       params.start_pos,
       params.end_pos,
-      params.content
+      params.content,
+      now,
+      now
     )
   }
 
@@ -121,12 +124,13 @@ export class InteractionDB {
   }
 
   updateAnnotation(params: Pick<Annotation, 'id' | 'content'>) {
+    const now = Date.now()
     const stmt = this.db.prepare(`
       UPDATE annotation
-      SET content = ?, updated_at = CURRENT_TIMESTAMP
+      SET content = ?, updated_at = ?
       WHERE id = ?
     `)
-    return stmt.run(params.content, params.id)
+    return stmt.run(params.content, now, params.id)
   }
 
   deleteAnnotation(id: number) {
@@ -137,11 +141,12 @@ export class InteractionDB {
   // ========== 笔记相关方法 ==========
 
   addNote(params: Omit<Note, 'id' | 'created_at' | 'updated_at'>) {
+    const now = Date.now()
     const stmt = this.db.prepare(`
-      INSERT INTO note (poetry_id, title, content)
-      VALUES (?, ?, ?)
+      INSERT INTO note (poetry_id, title, content, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
     `)
-    return stmt.run(params.poetry_id, params.title, params.content)
+    return stmt.run(params.poetry_id, params.title, params.content, now, now)
   }
 
   getNotesByPoetry(poetryId: number) {
@@ -190,12 +195,13 @@ export class InteractionDB {
   }
 
   updateNote(params: Pick<Note, 'id' | 'title' | 'content'>) {
+    const now = Date.now()
     const stmt = this.db.prepare(`
       UPDATE note
-      SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP
+      SET title = ?, content = ?, updated_at = ?
       WHERE id = ?
     `)
-    return stmt.run(params.title, params.content, params.id)
+    return stmt.run(params.title, params.content, now, params.id)
   }
 
   deleteNote(id: number) {
@@ -206,11 +212,12 @@ export class InteractionDB {
   // ========== 标记相关方法 ==========
 
   setBookmark(params: Omit<Bookmark, 'id' | 'created_at'>) {
+    const now = Date.now()
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO bookmark (poetry_id, type, data, created_at)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ?)
     `)
-    return stmt.run(params.poetry_id, params.type, params.data)
+    return stmt.run(params.poetry_id, params.type, params.data, now)
   }
 
   getBookmark(poetryId: number, type: string) {
@@ -246,11 +253,12 @@ export class InteractionDB {
   // ========== 标签相关方法 ==========
 
   createTag(params: Omit<Tag, 'id' | 'created_at' | 'updated_at'>): Tag {
+    const now = Date.now()
     const stmt = this.db.prepare(`
-      INSERT INTO tag (name, color)
-      VALUES (?, ?)
+      INSERT INTO tag (name, color, created_at, updated_at)
+      VALUES (?, ?, ?, ?)
     `)
-    const result = stmt.run(params.name, params.color)
+    const result = stmt.run(params.name, params.color, now, now)
 
     // 查询并返回完整的 Tag 对象
     const selectStmt = this.db.prepare(`SELECT * FROM tag WHERE id = ?`)
@@ -263,12 +271,13 @@ export class InteractionDB {
   }
 
   updateTag(params: Pick<Tag, 'id' | 'name' | 'color'>): Tag {
+    const now = Date.now()
     const stmt = this.db.prepare(`
       UPDATE tag
-      SET name = ?, color = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, color = ?, updated_at = ?
       WHERE id = ?
     `)
-    stmt.run(params.name, params.color, params.id)
+    stmt.run(params.name, params.color, now, params.id)
 
     // 查询并返回更新后的 Tag 对象
     const selectStmt = this.db.prepare(`SELECT * FROM tag WHERE id = ?`)
@@ -284,11 +293,12 @@ export class InteractionDB {
   }
 
   addTagToPoetry(poetryId: number, tagId: number) {
+    const now = Date.now()
     const stmt = this.db.prepare(`
-      INSERT OR IGNORE INTO poetry_tag (poetry_id, tag_id)
-      VALUES (?, ?)
+      INSERT OR IGNORE INTO poetry_tag (poetry_id, tag_id, created_at)
+      VALUES (?, ?, ?)
     `)
-    return stmt.run(poetryId, tagId)
+    return stmt.run(poetryId, tagId, now)
   }
 
   getTagsByPoetry(poetryId: number) {

@@ -104,6 +104,10 @@ const loadCategories = async () => {
   }
 }
 
+onActivated(() => {
+  loadBookmarkStatus()
+})
+
 // 搜索诗词
 const searchPoetry = async (toResetPage = false) => {
   try {

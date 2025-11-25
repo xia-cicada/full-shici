@@ -39,8 +39,12 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const interactionStore = useInteractionStore()
-const bookmarked = ref(false)
 const loading = ref(false)
+
+// 直接从 store 缓存读取收藏状态（响应式）
+const bookmarked = computed(() => {
+  return interactionStore.bookmarkCache.get(props.poetryId) || false
+})
 
 // 图标类名（根据收藏状态）
 const iconClass = computed(() => {
@@ -57,15 +61,18 @@ const iconClass = computed(() => {
   return [iconName, sizeClass, colorClass].filter(Boolean).join(' ')
 })
 
-// 初始化：加载收藏状态
+// 初始化：确保收藏状态已加载到缓存
 const loadBookmarkStatus = async () => {
-  loading.value = true
-  try {
-    bookmarked.value = await interactionStore.isBookmarked(props.poetryId)
-  } catch (error) {
-    console.error('加载收藏状态失败:', error)
-  } finally {
-    loading.value = false
+  // 如果缓存中没有，则加载状态
+  if (!interactionStore.bookmarkCache.has(props.poetryId)) {
+    loading.value = true
+    try {
+      await interactionStore.isBookmarked(props.poetryId)
+    } catch (error) {
+      console.error('加载收藏状态失败:', error)
+    } finally {
+      loading.value = false
+    }
   }
 }
 
@@ -76,7 +83,6 @@ const handleToggle = async () => {
   loading.value = true
   try {
     const newStatus = await interactionStore.toggleBookmark(props.poetryId)
-    bookmarked.value = newStatus
     emit('bookmarkChanged', newStatus)
   } catch (error) {
     console.error('切换收藏状态失败:', error)

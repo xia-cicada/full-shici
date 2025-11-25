@@ -6,28 +6,34 @@
     <title>全诗词</title>
     <style>
       :root {
-        --primary-color: #3a5a8f;
-        --primary-light: #4a6baf;
+        --primary-color: #2c5282;
+        --primary-light: #4299e1;
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         --secondary-color: #6c757d;
-        --accent-color: #8b4513;
-        --bg-color: #f9f9f7;
-        --text-color: #333333;
+        --accent-color: #d97706;
+        --accent-light: #f59e0b;
+        --bg-color: #fafafa;
+        --text-color: #2d3748;
         --card-bg: #ffffff;
-        --header-bg: rgba(255, 255, 255, 0.9);
-        --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        --border-radius: 2px;
+        --header-bg: rgba(255, 255, 255, 0.95);
+        --shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+        --border-radius: 12px;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --primary-color: #5d8ac9;
-          --primary-light: #6c9bdf;
+          --primary-color: #4299e1;
+          --primary-light: #63b3ed;
+          --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           --secondary-color: #a0a0a0;
-          --accent-color: #cd853f;
-          --bg-color: #121212;
-          --text-color: #f0f0f0;
-          --card-bg: #1e1e1e;
-          --header-bg: rgba(30, 30, 30, 0.9);
-          --shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          --accent-color: #f59e0b;
+          --accent-light: #fbbf24;
+          --bg-color: #0f172a;
+          --text-color: #e2e8f0;
+          --card-bg: #1e293b;
+          --header-bg: rgba(30, 41, 59, 0.95);
+          --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+          --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
         }
       }
       body {
@@ -52,43 +58,58 @@
         padding: 0 20px;
       }
       header {
-        background-color: var(--header-bg);
-        backdrop-filter: blur(10px);
-        padding: 40px 0;
-        margin-bottom: 40px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        background: var(--header-bg);
+        backdrop-filter: blur(20px);
+        padding: 60px 0;
+        margin-bottom: 50px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
         border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        position: relative;
+      }
+      header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--primary-gradient);
       }
       .header-content {
         text-align: center;
-        max-width: 800px;
+        max-width: 900px;
         margin: 0 auto;
       }
       h1 {
-        color: var(--primary-color);
-        margin: 0;
-        font-size: 2.8rem;
-        font-weight: 700;
-        letter-spacing: 1px;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0 0 20px 0;
+        font-size: 3.5rem;
+        font-weight: 800;
+        letter-spacing: 2px;
         position: relative;
         display: inline-block;
       }
       h1:after {
         content: '';
         position: absolute;
-        bottom: -10px;
+        bottom: -15px;
         left: 50%;
         transform: translateX(-50%);
-        width: 80px;
-        height: 3px;
+        width: 100px;
+        height: 4px;
         background: var(--accent-color);
-        border-radius: 3px;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
       }
       .subtitle {
         color: var(--secondary-color);
-        font-size: 1.3rem;
-        margin: 15px 0 25px;
+        font-size: 1.4rem;
+        margin: 25px 0 35px;
         font-weight: 400;
+        letter-spacing: 0.5px;
       }
       .github-link {
         display: inline-flex;
@@ -114,33 +135,37 @@
       .card {
         background-color: var(--card-bg);
         border-radius: var(--border-radius);
-        padding: 30px;
-        margin-bottom: 30px;
+        padding: 35px;
+        margin-bottom: 35px;
         box-shadow: var(--shadow);
         transition:
           transform 0.3s ease,
           box-shadow 0.3s ease;
+        border: 1px solid rgba(0, 0, 0, 0.05);
       }
       .card:hover {
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-hover);
       }
       h2 {
         color: var(--primary-color);
         margin-top: 0;
-        font-size: 1.8rem;
-        font-weight: 600;
-        margin-bottom: 20px;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 25px;
         position: relative;
-        padding-bottom: 10px;
+        padding-bottom: 15px;
+        letter-spacing: 0.5px;
       }
       h2:after {
         content: '';
         position: absolute;
         bottom: 0;
         left: 0;
-        width: 60px;
-        height: 2px;
-        background: var(--accent-color);
+        width: 80px;
+        height: 3px;
+        background: var(--primary-gradient);
+        border-radius: 3px;
       }
       .data-grid {
         display: grid;
@@ -150,29 +175,39 @@
       }
       .data-item {
         text-align: center;
-        padding: 20px 15px;
+        padding: 24px 15px;
         background: linear-gradient(
           135deg,
-          rgba(74, 107, 175, 0.1) 0%,
-          rgba(74, 107, 175, 0.05) 100%
+          rgba(102, 126, 234, 0.08) 0%,
+          rgba(118, 75, 162, 0.08) 100%
         );
-        border-radius: var(--border-radius);
-        border: 1px solid rgba(74, 107, 175, 0.1);
+        border-radius: 10px;
+        border: 1px solid rgba(102, 126, 234, 0.15);
         transition: all 0.3s ease;
       }
       .data-item:hover {
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        border-color: rgba(74, 107, 175, 0.3);
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.2);
+        border-color: rgba(102, 126, 234, 0.3);
+        background: linear-gradient(
+          135deg,
+          rgba(102, 126, 234, 0.12) 0%,
+          rgba(118, 75, 162, 0.12) 100%
+        );
       }
       .data-name {
         font-size: 1rem;
         color: var(--secondary-color);
-        margin-bottom: 8px;
+        margin-bottom: 10px;
+        font-weight: 500;
       }
       .data-count {
-        font-weight: bold;
-        font-size: 1.5rem;
-        color: var(--primary-color);
+        font-weight: 700;
+        font-size: 1.6rem;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
       .feature-list {
         padding-left: 20px;
@@ -185,12 +220,13 @@
         padding-left: 30px;
       }
       .feature-list li:before {
-        content: '•';
+        content: '✦';
         color: var(--accent-color);
-        font-size: 1.5rem;
+        font-size: 1.2rem;
         position: absolute;
         left: 0;
-        top: -3px;
+        top: 2px;
+        font-weight: bold;
       }
       .note {
         font-size: 0.95rem;
@@ -221,22 +257,37 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+        background: var(--primary-gradient);
         color: white;
         text-align: center;
-        padding: 16px 30px;
+        padding: 18px 36px;
         border-radius: var(--border-radius);
         text-decoration: none;
         font-weight: 600;
         font-size: 1.1rem;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         border: none;
         cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+      .download-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s ease;
+      }
+      .download-btn:hover::before {
+        left: 100%;
       }
       .download-btn:hover {
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
-        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
       }
       .download-btn svg {
         width: 20px;
@@ -312,7 +363,7 @@
     <header>
       <div class="header-content">
         <h1>全诗词</h1>
-        <p class="subtitle">诗词查询与AI赏析应用</p>
+        <p class="subtitle">典藏中华诗词 · AI智能赏析 · 个性化管理</p>
         <a href="https://github.com/xia-cicada/full-shici" class="github-link" target="_blank">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path
@@ -377,24 +428,33 @@
       </div>
 
       <div class="card">
-        <h2>搜索功能</h2>
+        <h2>精准检索</h2>
         <ul class="feature-list">
-          <li>基于SQLite FTS5实现的高性能全文检索</li>
-          <li>支持<strong>标题、作者、朝代</strong>搜索</li>
-          <li>支持拼音和首字母搜索</li>
-          <li><i>暂不支持文章内容搜索</i></li>
+          <li>支持<strong>标题、作者、朝代</strong>精准检索</li>
+          <li>支持拼音和首字母搜索，智能适配简繁体</li>
+          <li>多维度筛选：按分类、标签、收藏快速定位</li>
         </ul>
 
         <div class="image-gallery">
           <div class="image-container">
             <img src="./images/sull-shici-query.png" alt="全诗词搜索界面" loading="lazy" />
-            <div class="image-caption">基本搜索功能</div>
+            <div class="image-caption">基本搜索</div>
           </div>
           <div class="image-container">
             <img src="./images/sull-shici-query-pinyin.png" alt="拼音搜索示例" loading="lazy" />
-            <div class="image-caption">拼音首字母搜索</div>
+            <div class="image-caption">拼音搜索</div>
           </div>
         </div>
+      </div>
+
+      <div class="card">
+        <h2>个性化管理</h2>
+        <ul class="feature-list">
+          <li><strong>收藏标记</strong>：一键收藏喜欢的诗词，随时快速访问</li>
+          <li><strong>笔记评论</strong>：记录你的感悟与解读，支持添加、编辑和删除</li>
+          <li><strong>自定义标签</strong>：创建个人标签体系，按主题分类管理诗词</li>
+          <li><strong>标签筛选</strong>：通过标签快速检索相关诗词作品</li>
+        </ul>
       </div>
 
       <div class="card">

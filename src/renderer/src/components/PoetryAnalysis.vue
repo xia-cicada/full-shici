@@ -28,11 +28,16 @@
           </n-card>
 
           <n-card name="art" title="艺术特色" hoverable>
-            <n-space>
-              <n-tag v-for="(feature, index) in analysisResult.artisticFeatures" :key="index">
-                {{ feature }}
-              </n-tag>
-            </n-space>
+            <n-flex>
+              <n-list>
+                <n-list-item
+                  v-for="(feature, index) in analysisResult.artisticFeatures"
+                  :key="index"
+                >
+                  {{ feature }}
+                </n-list-item>
+              </n-list>
+            </n-flex>
           </n-card>
         </div>
 

@@ -13,8 +13,7 @@
 
     <!-- 评论列表 -->
     <n-spin :show="loading">
-      <n-empty v-if="!loading && notes.length === 0" description="还没有评论，快来写下你的想法吧">
-      </n-empty>
+      <n-empty v-if="!loading && notes.length === 0" description="无"> </n-empty>
 
       <n-space v-else vertical size="large">
         <n-card v-for="note in notes" :key="note.id" size="small" hoverable>
@@ -113,7 +112,7 @@ const rules: FormRules = {
 }
 
 // 格式化时间
-const formatTime = (timestamp: number) => {
+const formatTime = (timestamp: number | string) => {
   const date = new Date(timestamp)
   const now = new Date()
   const diff = now.getTime() - date.getTime()

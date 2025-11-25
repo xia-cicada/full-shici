@@ -1,25 +1,11 @@
 <template>
-  <n-button
-    v-if="type === 'button'"
-    :size="size"
-    :quaternary="quaternary"
-    :loading="loading"
-    @click="handleToggle"
-  >
+  <n-button v-if="type === 'button'" :size="size" :quaternary="quaternary" @click="handleToggle">
     <template #icon>
       <div :class="iconClass" />
     </template>
-    <span v-if="showText">{{ bookmarked ? '已收藏' : '收藏' }}</span>
   </n-button>
 
-  <n-button
-    v-else
-    text
-    :size="size"
-    :loading="loading"
-    @click="handleToggle"
-    class="bookmark-icon-button"
-  >
+  <n-button v-else text :size="size" @click="handleToggle" class="bookmark-icon-button">
     <div :class="iconClass" />
   </n-button>
 </template>
@@ -66,7 +52,7 @@ const iconClass = computed(() => {
   }[props.size]
 
   const iconName = bookmarked.value ? 'i-tabler-heart-filled' : 'i-tabler-heart'
-  const colorClass = bookmarked.value ? 'text-red-500' : ''
+  const colorClass = bookmarked.value ? 'text-red' : ''
 
   return [iconName, sizeClass, colorClass].filter(Boolean).join(' ')
 })
@@ -108,14 +94,5 @@ onMounted(() => {
 <style scoped>
 .bookmark-icon-button {
   padding: 4px;
-  transition: transform 0.2s ease;
-}
-
-.bookmark-icon-button:hover {
-  transform: scale(1.1);
-}
-
-.bookmark-icon-button:active {
-  transform: scale(0.95);
 }
 </style>

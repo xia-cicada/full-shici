@@ -11,8 +11,7 @@ export default defineConfig({
     presetWind3(),
     presetIcons({
       extraProperties: {
-        display: 'inline-block',
-        'vertical-align': 'middle'
+        display: 'inline-block'
       }
     })
   ],

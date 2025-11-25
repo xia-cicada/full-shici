@@ -153,6 +153,37 @@ export class InteractionDB {
     return stmt.all(poetryId)
   }
 
+  getNotesSummaryByPoetry(poetryId: number) {
+    // 获取总条数
+    const countStmt = this.db.prepare(`
+    SELECT COUNT(*) AS count FROM note
+    WHERE poetry_id = ?
+  `)
+    const countResult = countStmt.get(poetryId) as { count: number }
+    const total = countResult?.count || 0
+
+    if (total === 0) {
+      return {
+        latestContent: null,
+        totalCount: 0
+      }
+    }
+
+    // 获取最新一条的内容（按 created_at DESC 的第一条）
+    const latestStmt = this.db.prepare(`
+    SELECT content FROM note
+    WHERE poetry_id = ?
+    ORDER BY created_at DESC
+    LIMIT 1
+  `)
+    const latestResult = latestStmt.get(poetryId) as { content: string } | undefined
+
+    return {
+      latestContent: latestResult?.content ?? null,
+      totalCount: total
+    }
+  }
+
   getNote(id: number) {
     const stmt = this.db.prepare(`SELECT * FROM note WHERE id = ?`)
     return stmt.get(id)

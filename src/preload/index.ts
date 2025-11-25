@@ -65,6 +65,8 @@ const electronAPI: ExposedApi = {
     // 笔记相关
     addNote: (note) => ipcRenderer.invoke('interaction-add-note', note),
     getNotesByPoetry: (poetryId) => ipcRenderer.invoke('interaction-get-notes-by-poetry', poetryId),
+    getNotesSummaryByPoetry: (poetryId) =>
+      ipcRenderer.invoke('interaction-get-notes-summary-by-poetry', poetryId),
     getNote: (id) => ipcRenderer.invoke('interaction-get-note', id),
     updateNote: (params) => ipcRenderer.invoke('interaction-update-note', params),
     deleteNote: (id) => ipcRenderer.invoke('interaction-delete-note', id),
@@ -80,8 +82,7 @@ const electronAPI: ExposedApi = {
     getAllTags: () => ipcRenderer.invoke('interaction-get-all-tags'),
     updateTag: (params) => ipcRenderer.invoke('interaction-update-tag', params),
     deleteTag: (id) => ipcRenderer.invoke('interaction-delete-tag', id),
-    addTagToPoetry: (params) =>
-      ipcRenderer.invoke('interaction-add-tag-to-poetry', params),
+    addTagToPoetry: (params) => ipcRenderer.invoke('interaction-add-tag-to-poetry', params),
     getTagsByPoetry: (poetryId) => ipcRenderer.invoke('interaction-get-tags-by-poetry', poetryId),
     getPoetriesByTag: (tagId) => ipcRenderer.invoke('interaction-get-poetries-by-tag', tagId),
     removeTagFromPoetry: (params) =>

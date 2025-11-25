@@ -45,6 +45,10 @@ export function setupInteractionDatabaseIPC() {
     return interactionDB.getNotesByPoetry(poetryId)
   })
 
+  ipcMain.handle('interaction-get-notes-summary-by-poetry', (_, poetryId: number) => {
+    return interactionDB.getNotesSummaryByPoetry(poetryId)
+  })
+
   ipcMain.handle('interaction-get-note', (_, id: number) => {
     return interactionDB.getNote(id)
   })

@@ -94,7 +94,6 @@ export const useInteractionStore = defineStore('interaction', () => {
           type: 'favorite'
         })
         bookmarkCache.value.set(poetryId, false)
-        message.success('已取消收藏')
         return false
       } else {
         // 添加收藏
@@ -103,7 +102,6 @@ export const useInteractionStore = defineStore('interaction', () => {
           type: 'favorite'
         })
         bookmarkCache.value.set(poetryId, true)
-        message.success('已添加到收藏')
         return true
       }
     } catch (error) {
@@ -169,7 +167,7 @@ export const useInteractionStore = defineStore('interaction', () => {
       await window.electronAPI.interaction.updateTag({ id, name, color })
       const index = tags.value.findIndex((t) => t.id === id)
       if (index !== -1) {
-        tags.value[index] = { ...tags.value[index], name, color, updated_at: Date.now() }
+        tags.value[index] = { ...tags.value[index], name, color, updated_at: `${Date.now()}` }
       }
       message.success('标签更新成功')
       return true

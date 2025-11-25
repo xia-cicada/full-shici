@@ -1,11 +1,12 @@
 <template>
   <div class="poetry-tags">
     <!-- 显示已添加的标签 -->
-    <n-space v-if="poetryTags.length > 0 || editable" align="center">
+    <n-flex v-if="poetryTags.length > 0 || editable" align="center">
       <n-tag
         v-for="tag in poetryTags"
         :key="tag.id"
         :color="{ color: tag.color || '#18a058', textColor: '#fff' }"
+        style="--n-close-icon-color: #eee; --n-close-icon-color-hover: #fff"
         :closable="editable"
         @close="handleRemoveTag(tag.id)"
       >
@@ -19,34 +20,28 @@
         </template>
         添加标签
       </n-button>
-    </n-space>
+    </n-flex>
 
-    <n-empty
-      v-else
-      description="还没有标签"
-      size="small"
-      class="py-4"
-      style="min-height: auto"
-    />
+    <n-empty v-else description="无" size="small" class="py-4" style="min-height: auto" />
 
     <!-- 标签选择器 -->
     <n-modal
       v-model:show="showTagSelector"
       preset="dialog"
       title="选择标签"
+      :show-icon="false"
       positive-text="确定"
       negative-text="取消"
       @positive-click="handleAddTags"
     >
       <div class="mt-4">
-        <n-space vertical>
+        <n-flex vertical>
           <!-- 创建新标签 -->
           <n-card size="small" title="创建新标签">
-            <n-space>
+            <n-flex align="center">
               <n-input
                 v-model:value="newTagName"
                 placeholder="标签名称"
-                style="width: 200px"
                 @keyup.enter="handleCreateTag"
               />
               <n-color-picker
@@ -54,14 +49,14 @@
                 :swatches="tagColorSwatches"
                 style="width: 100px"
               />
-              <n-button type="primary" @click="handleCreateTag">创建</n-button>
-            </n-space>
+              <n-button type="primary" size="small" @click="handleCreateTag">创建</n-button>
+            </n-flex>
           </n-card>
 
           <!-- 选择已有标签 -->
           <n-card size="small" title="选择已有标签">
             <n-checkbox-group v-model:value="selectedTagIds">
-              <n-space>
+              <n-flex>
                 <n-tag
                   v-for="tag in availableTags"
                   :key="tag.id"
@@ -72,7 +67,7 @@
                 >
                   {{ tag.name }}
                 </n-tag>
-              </n-space>
+              </n-flex>
             </n-checkbox-group>
 
             <n-empty
@@ -82,7 +77,7 @@
               class="mt-4"
             />
           </n-card>
-        </n-space>
+        </n-flex>
       </div>
     </n-modal>
   </div>

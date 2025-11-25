@@ -51,13 +51,19 @@ export interface InteractionAPI {
   // ========== 注解相关API ==========
   addAnnotation: (params: Omit<Annotation, 'id' | 'created_at' | 'updated_at'>) => Promise<number>
   getAnnotationsByPoetry: (poetryId: number) => Promise<Annotation[]>
-  getAnnotationsByVerse: (params: { poetry_id: number; verse_index: number }) => Promise<Annotation[]>
+  getAnnotationsByVerse: (params: {
+    poetry_id: number
+    verse_index: number
+  }) => Promise<Annotation[]>
   updateAnnotation: (params: Pick<Annotation, 'id' | 'content'>) => Promise<void>
   deleteAnnotation: (id: number) => Promise<void>
 
   // ========== 笔记相关API ==========
   addNote: (params: Omit<Note, 'id' | 'created_at' | 'updated_at'>) => Promise<number>
   getNotesByPoetry: (poetryId: number) => Promise<Note[]>
+  getNotesSummaryByPoetry: (
+    poetryId: number
+  ) => Promise<{ latestContent: string | null; totalCount: number }>
   getNote: (id: number) => Promise<Note | null>
   updateNote: (params: Pick<Note, 'id' | 'title' | 'content'>) => Promise<void>
   deleteNote: (id: number) => Promise<void>

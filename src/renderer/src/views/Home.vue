@@ -10,6 +10,7 @@ interface PoetryRow {
   author: string
   rhythmic: string | null
   paragraphs: string[]
+  category_id: number
   category_name: string
 }
 
@@ -40,20 +41,6 @@ const userTags = computed(() => interactionStore.tags)
 
 // 表头配置
 const columns: DataTableColumns<PoetryRow> = [
-  {
-    title: '',
-    key: 'bookmark',
-    width: 50,
-    render: (row) => {
-      const isBookmarked = bookmarkStatus.value.get(row.id) || false
-      return h('div', { class: 'flex justify-center' }, [
-        h('div', {
-          class: isBookmarked ? 'i-tabler-heart-filled text-red-500' : 'i-tabler-heart text-gray-400',
-          style: { fontSize: '18px' }
-        })
-      ])
-    }
-  },
   {
     title: '标题',
     key: 'title',
@@ -92,7 +79,7 @@ const columns: DataTableColumns<PoetryRow> = [
         h(BookmarkButton, {
           poetryId: row.id,
           size: 'small',
-          type: 'icon',
+          type: 'button',
           onBookmarkChanged: () => loadBookmarkStatus()
         }),
         h(
@@ -325,20 +312,16 @@ onMounted(() => {
         clearable
         style="width: 150px"
       />
-      <n-switch v-model:value="showFavoritesOnly">
-        <template #checked>
-          <n-flex align="center" :size="4">
-            <div class="i-tabler-heart-filled" />
-            <span>只看收藏</span>
-          </n-flex>
+      <n-button @click="showFavoritesOnly = !showFavoritesOnly">
+        <template #icon>
+          <n-icon>
+            <i
+              class="i-tabler:heart"
+              :class="{ 'text-red i-tabler:heart-filled': showFavoritesOnly }"
+            ></i>
+          </n-icon>
         </template>
-        <template #unchecked>
-          <n-flex align="center" :size="4">
-            <div class="i-tabler-heart" />
-            <span>全部</span>
-          </n-flex>
-        </template>
-      </n-switch>
+      </n-button>
       <n-button type="primary" @click="searchPoetry(true)">
         <template #icon>
           <div class="i-tabler-search" />
@@ -357,6 +340,7 @@ onMounted(() => {
           :columns="columns"
           :data="poetryList"
           :bordered="true"
+          :row-key="(d) => d.id"
           style="height: 100%"
           flex-height
         />

@@ -6,8 +6,8 @@
 
 _诗词数据基于[Chinese-Poetry](https://github.com/chinese-poetry/chinese-poetry)。_
 
-[下载](https://github.com/xia-cicada/full-shici/releases/download/v0.0.1/full-shici-0.0.1-setup.exe)
-[下载：备用地址](https://store-1258290249.cos.ap-guangzhou.myqcloud.com/others/full-shici/full-shici-0.0.1-setup.exe)
+[下载](https://github.com/xia-cicada/full-shici/releases/download/v0.0.2/full-shici-0.0.2-setup.exe)
+[下载：备用地址](https://store-1258290249.cos.ap-guangzhou.myqcloud.com/others/full-shici/full-shici-0.0.2-setup.exe)
 
 ## Project Setup
 

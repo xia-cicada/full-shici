@@ -1,5 +1,5 @@
 import { resolve } from 'path'
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { defineConfig } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 import UnoCSS from 'unocss/vite'
 import AutoImport from 'unplugin-auto-import/vite'
@@ -11,12 +11,13 @@ export default defineConfig({
     build: {
       rollupOptions: {
         external: ['better-sqlite3']
-      }
+      },
+      externalizeDeps: true
     },
-    plugins: [externalizeDepsPlugin()]
+    plugins: []
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: []
   },
   renderer: {
     resolve: {

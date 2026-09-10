@@ -26,8 +26,7 @@ src/main/
 ├── interaction/            # 用户交互模块
 │   ├── types.ts            # 行结构（snake_case）+ IPC 输入类型（驼峰 XInput）
 │   ├── db.ts               # 注解/笔记/收藏/标签 + 批量查询（ID 集合、标签计数）
-│   ├── ipc.ts              # IPC + 跨库组合查询（收藏/标签视图搜索）
-│   └── interaction.ts      # 预留（当前为空类）
+│   └── ipc.ts              # IPC + 跨库组合查询（收藏/标签视图搜索）
 └── userData/               # 用户数据管理
     ├── db.ts               # UserData：连接、migrateNs 按模块迁移、close
     └── index.ts            # 导出
@@ -133,7 +132,7 @@ try {
 - 列表/搜索返回 `PoetrySummary`（不取 notes/tags/extra_info，少 3 次 JSON.parse）；详情用 `getPoetryById` 取全量
 - 收藏状态按页批量 IN 查询（500 一批）+ 渲染层缓存；标签计数单条 GROUP BY
 - 赏析按诗缓存，AI 只请求一次
-- 随机诗词暂用 `ORDER BY RANDOM()`，数据量大时可改为 ID 随机落点
+- 随机诗词用 id 随机落点，避免 `ORDER BY RANDOM()` 全表扫描
 
 ## 开发约束
 

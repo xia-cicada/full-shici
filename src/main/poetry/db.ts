@@ -437,14 +437,31 @@ class PoetryDB {
     return results.map((item) => item.rhythmic)
   }
 
-  // 获取随机诗词
+  // 获取随机诗词（id 随机落点，避免 ORDER BY RANDOM() 全表扫描）
   getRandomPoetry(count: number = 1): Poetry[] {
-    const stmt = this.db.prepare(`
+    const { maxId } = this.db.prepare('SELECT MAX(id) as maxId FROM poetry').get() as {
+      maxId: number
+    }
+    if (!maxId) return []
+
+    const pick = this.db.prepare(`
       SELECT * FROM poetry
-      ORDER BY RANDOM()
-      LIMIT ?
+      WHERE id >= ?
+      ORDER BY id
+      LIMIT 1
     `)
-    const results = stmt.all(count) as any[]
+    const seen = new Set<number>()
+    const results: any[] = []
+    // 命中重复或 id 空洞时重试，上限避免小库死循环
+    let attempts = 0
+    const maxAttempts = count * 10 + 20
+    while (results.length < count && attempts < maxAttempts && seen.size < maxId) {
+      attempts++
+      const row = pick.get(Math.floor(Math.random() * maxId) + 1) as any
+      if (!row || seen.has(row.id)) continue
+      seen.add(row.id)
+      results.push(row)
+    }
 
     return results.map((item) => ({
       ...item,

@@ -105,8 +105,10 @@ const poetry = ref<Poetry | null>(null)
 const notesSummary = ref<{ latestContent: string | null; totalCount: number }>()
 const loading = ref(true)
 
-// 从路由获取ID
+// 从路由获取ID（非法 id 视为未找到，走 n-empty 分支）
 const { id } = router.currentRoute.value.query
+const poetryId = Number(id)
+const isValidId = Number.isInteger(poetryId) && poetryId > 0
 
 const moreNotesVisible = ref(false)
 function handleMoreNotes() {
@@ -114,14 +116,19 @@ function handleMoreNotes() {
 }
 
 async function loadNotesSummary() {
-  const summary = await window.electronAPI.interaction.getNotesSummaryByPoetry(Number(id))
+  if (!isValidId) return
+  const summary = await window.electronAPI.interaction.getNotesSummaryByPoetry(poetryId)
   notesSummary.value = summary
 }
 
 onMounted(async () => {
+  if (!isValidId) {
+    loading.value = false
+    return
+  }
   try {
     loading.value = true
-    const res = await window.electronAPI.db.getPoetryById(Number(id))
+    const res = await window.electronAPI.db.getPoetryById(poetryId)
     poetry.value = res
     loadNotesSummary()
   } catch (error) {

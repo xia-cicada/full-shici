@@ -289,11 +289,16 @@ export class AiDB {
 
   // ========== 赏析缓存相关方法 ==========
 
-  getPoetryAnalysis(poetryId: number): PoetryAnalysis | null {
+  /**
+   * 读取赏析缓存。model 与缓存记录的生成模型不一致时视为未命中，
+   * 避免切换默认模型后一直返回旧模型的结果。
+   */
+  getPoetryAnalysis(poetryId: number, model?: string): PoetryAnalysis | null {
     const row = this.db
-      .prepare('SELECT content FROM ai_analysis WHERE poetry_id = ?')
-      .get(poetryId) as { content: string } | undefined
+      .prepare('SELECT model, content FROM ai_analysis WHERE poetry_id = ?')
+      .get(poetryId) as { model: string; content: string } | undefined
     if (!row) return null
+    if (model && row.model !== model) return null
     try {
       return JSON.parse(row.content) as PoetryAnalysis
     } catch {

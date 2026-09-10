@@ -103,8 +103,8 @@ export interface ExposedApi {
   toggleMaximize: () => Promise<void>
   close: () => Promise<void>
   relaunch: () => Promise<void>
-  onMaximized: (fn: () => void) => void
-  onUnmaximized: (fn: () => void) => void
+  onMaximized: (fn: () => void) => () => void
+  onUnmaximized: (fn: () => void) => () => void
 
   // 数据库访问
   db: PoetryDBAPI

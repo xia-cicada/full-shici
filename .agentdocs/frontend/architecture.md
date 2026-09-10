@@ -15,7 +15,7 @@ src/renderer/src/
 ├── main.ts                 # Vue 应用入口
 ├── App.vue                 # 根组件（主题 Provider + 消息/对话框等 Provider）
 ├── router/                 # 路由配置
-├── views/                  # 页面组件（Home/Detail/Favorites/Tags/ModelConfig/About/404）
+├── views/                  # 页面组件（Home/Detail/Favorites/Tags/ModelConfig/About/error/404）
 │   └── layout/MainLayout.vue  # 布局 + 诗词库缺失检测
 ├── components/             # 可复用组件（BookmarkButton/PoetryAnalysis/PoetryNotes/
 │                           #   PoetryTags/DbMissingTip/CustomAppBar/AppUtils）
@@ -32,8 +32,8 @@ src/renderer/src/
 - `/favorites` - 收藏列表页面
 - `/tags` - 标签管理页面
 - `/model-config` - AI 模型配置
-- `/about` - 关于页面
-- 404 页面组件存在但未注册 catch-all 路由
+- `/about` - 关于页面（版本、数据来源、项目链接）
+- 未匹配路由由 catch-all 进入 `views/error/404.vue`（已注册）
 
 ## 与主进程的契约
 - 所有与主进程的通信通过 `window.electronAPI`，类型定义在 `src/preload/types.ts`（权威来源）

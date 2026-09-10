@@ -32,9 +32,6 @@ const categories = ref<Category[]>([])
 const router = useRouter()
 const interactionStore = useInteractionStore()
 
-// 收藏状态缓存 (用于当前页的快速显示)
-const bookmarkStatus = ref<Map<number, boolean>>(new Map())
-
 // 用户标签列表
 const userTags = computed(() => interactionStore.tags)
 
@@ -149,13 +146,11 @@ const searchPoetry = async (toResetPage = false) => {
   }
 }
 
-// 加载收藏状态
+// 加载收藏状态：填充 store 缓存，BookmarkButton 响应式读取
 const loadBookmarkStatus = async () => {
   if (poetryList.value.length === 0) return
 
-  const poetryIds = poetryList.value.map((p) => p.id)
-  const statuses = await interactionStore.batchCheckBookmarks(poetryIds)
-  bookmarkStatus.value = statuses
+  await interactionStore.batchCheckBookmarks(poetryList.value.map((p) => p.id))
 }
 
 // 重置搜索

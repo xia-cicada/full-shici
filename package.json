@@ -1,7 +1,7 @@
 {
   "name": "full-shici",
   "version": "0.0.2",
-  "description": "全唐诗、全宋诗、全宋词",
+  "description": "全诗词桌面应用：全唐诗、全宋诗、宋词、元曲、诗经、楚辞、五代诗词、论语、曹操诗集",
   "main": "./out/main/index.js",
   "author": "xia-cicada",
   "homepage": "https://xia-cicada.github.io/full-shici/",

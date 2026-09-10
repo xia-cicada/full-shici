@@ -6,6 +6,7 @@ import Detail from '@/views/Detail.vue'
 import ModelConfig from '@/views/ModelConfig.vue'
 import Favorites from '@/views/Favorites.vue'
 import Tags from '@/views/Tags.vue'
+import NotFound from '@/views/error/404.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -44,6 +45,11 @@ const routes: RouteRecordRaw[] = [
         component: About
       }
     ]
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: NotFound
   }
 ]
 

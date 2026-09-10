@@ -36,15 +36,23 @@ const configAI = () => {
   router.push({ path: 'model-config' })
 }
 
-// 监听窗口状态变化
+// 监听窗口状态变化（卸载时清理，避免重复挂载累积监听器）
+let cleanupMaximized: (() => void) | undefined
+let cleanupUnmaximized: (() => void) | undefined
+
 onMounted(() => {
-  onMaximized(() => {
+  cleanupMaximized = onMaximized(() => {
     isMaximized.value = true
   })
 
-  onUnmaximized(() => {
+  cleanupUnmaximized = onUnmaximized(() => {
     isMaximized.value = false
   })
+})
+
+onUnmounted(() => {
+  cleanupMaximized?.()
+  cleanupUnmaximized?.()
 })
 </script>
 

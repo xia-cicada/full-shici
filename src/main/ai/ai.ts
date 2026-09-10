@@ -20,7 +20,7 @@ class AiAssist {
     const config = aiDB.getDefaultModelConfigRaw()
 
     if (!force) {
-      const cached = aiDB.getPoetryAnalysis(poetry.id)
+      const cached = aiDB.getPoetryAnalysis(poetry.id, config.model)
       if (cached) return cached
     }
 

@@ -8,15 +8,15 @@ const electronAPI: ExposedApi = {
   toggleMaximize: () => ipcRenderer.invoke('window-toggle-maximize'),
   close: () => ipcRenderer.invoke('window-close'),
   relaunch: () => ipcRenderer.invoke('app-relaunch'),
-  onMaximized: (fn: Function) => {
-    ipcRenderer.on('window-maximized', () => {
-      fn()
-    })
+  onMaximized: (fn: () => void) => {
+    const listener = () => fn()
+    ipcRenderer.on('window-maximized', listener)
+    return () => ipcRenderer.removeListener('window-maximized', listener)
   },
-  onUnmaximized: (fn: Function) => {
-    ipcRenderer.on('window-unmaximized', () => {
-      fn()
-    })
+  onUnmaximized: (fn: () => void) => {
+    const listener = () => fn()
+    ipcRenderer.on('window-unmaximized', listener)
+    return () => ipcRenderer.removeListener('window-unmaximized', listener)
   },
 
   // 数据库方法

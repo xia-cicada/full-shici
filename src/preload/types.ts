@@ -35,7 +35,8 @@ export interface PoetryDBAPI {
 }
 
 export interface AIAPI {
-  analyzePoetry: (poetry: Poetry, force?: boolean) => Promise<PoetryAnalysis>
+  /** force 忽略缓存；customPrompt 为自定义补充要求（提供时忽略缓存并覆盖） */
+  analyzePoetry: (poetry: Poetry, force?: boolean, customPrompt?: string) => Promise<PoetryAnalysis>
   addModelConfig: (config: ModelConfig) => Promise<ModelConfig>
   updateModelConfig: (id: number, config: Partial<ModelConfig>) => Promise<ModelConfig | null>
   getAllModelConfigs: () => Promise<ModelConfig[]>

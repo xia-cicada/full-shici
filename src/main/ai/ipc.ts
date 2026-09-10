@@ -8,9 +8,12 @@ export function setupAIIPC() {
   // 应用就绪后把历史明文 API Key 迁移为 safeStorage 加密存储
   aiDB.migratePlaintextApiKeys()
 
-  ipcMain.handle('ai-analyze-poetry', (_event, poetry: Poetry, force?: boolean) => {
-    return aiAssist.analyzePoetry(poetry, !!force)
-  })
+  ipcMain.handle(
+    'ai-analyze-poetry',
+    (_event, poetry: Poetry, force?: boolean, customPrompt?: string) => {
+      return aiAssist.analyzePoetry(poetry, !!force, customPrompt)
+    }
+  )
 
   // 模型配置
   ipcMain.handle('ai-add-model-config', (_event, config: ModelConfig) => {

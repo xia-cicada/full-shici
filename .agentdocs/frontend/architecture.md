@@ -47,7 +47,8 @@ src/renderer/src/
   过滤与分页都在主进程完成，渲染层不要再做全量内存分页
 - **收藏状态**：读 `interactionStore.bookmarkCache`（响应式 Map），批量刷新用
   `batchCheckBookmarks(ids)`；切换用 `toggleBookmark`，缓存由 store 内部维护
-- **AI 赏析**：`PoetryAnalysis` 组件挂载时自动请求（主进程有按诗缓存），刷新按钮传 `force=true`
+- **AI 赏析**：`PoetryAnalysis` 组件挂载时自动请求（主进程有按诗缓存）；
+  工具栏支持填写补充要求（`customPrompt`，如“侧重用典与格律”）后点重新赏析，优先满足用户要求并覆盖缓存
 
 ## 组件规范
 

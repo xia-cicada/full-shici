@@ -43,8 +43,8 @@ const electronAPI: ExposedApi = {
   },
 
   ai: {
-    analyzePoetry: (poetry, force?: boolean) =>
-      ipcRenderer.invoke('ai-analyze-poetry', poetry, force),
+    analyzePoetry: (poetry, force?: boolean, customPrompt?: string) =>
+      ipcRenderer.invoke('ai-analyze-poetry', poetry, force, customPrompt),
     addModelConfig: (config: ModelConfig) => ipcRenderer.invoke('ai-add-model-config', config),
     updateModelConfig: (id: number, config: Partial<ModelConfig>) =>
       ipcRenderer.invoke('ai-update-model-config', id, config),

@@ -9,14 +9,26 @@
     >
       <!-- 诗歌基本信息 -->
       <n-card :bordered="false" content-style="padding: 0 0.7rem;">
-        <div class="flex justify-end">
+        <!-- 赏析工具栏：补充要求 + 重新赏析 -->
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-sm font-bold shrink-0">AI 赏析</span>
+          <n-input
+            v-model:value="customPrompt"
+            size="small"
+            placeholder="补充要求（可选），如：侧重分析用典与格律"
+            :disabled="loading"
+            clearable
+            @keyup.enter="loadAnalysis(true)"
+          />
           <n-tooltip trigger="hover">
             <template #trigger>
-              <n-button size="tiny" quaternary :disabled="loading" @click="loadAnalysis(true)">
-                <i class="i-tabler-refresh"></i>
+              <n-button size="small" :disabled="loading" @click="loadAnalysis(true)">
+                <template #icon>
+                  <i class="i-tabler-refresh" />
+                </template>
               </n-button>
             </template>
-            重新赏析（忽略缓存）
+            重新赏析（忽略缓存{{ customPrompt.trim() ? '，并按补充要求生成' : '' }}）
           </n-tooltip>
         </div>
 
@@ -76,6 +88,8 @@ const props = defineProps<{
 const loading = ref(true)
 const error = ref('')
 const analysisResult = ref<PoetryAnalysis | null>()
+/** 用户补充要求：填写后重新赏析会优先满足，留空则按默认提示词 */
+const customPrompt = ref('')
 
 const router = useRouter()
 const handleConfigModel = () => {
@@ -90,7 +104,11 @@ const loadAnalysis = async (force = false) => {
     loading.value = true
     error.value = ''
     cleanHighlight?.()
-    const result = await window.electronAPI.ai.analyzePoetry(toDeepRaw(props.poetry), force)
+    const result = await window.electronAPI.ai.analyzePoetry(
+      toDeepRaw(props.poetry),
+      force,
+      customPrompt.value.trim() || undefined
+    )
 
     analysisResult.value = result
     const notes = (props.poetry.notes || []).map((d) => parsePoetryNote(d))

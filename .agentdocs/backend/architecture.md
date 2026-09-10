@@ -105,8 +105,8 @@ getTagPoetryCounts(tagIds?): Array<{ tagId, count }>
 
 ### AI 模块 API
 ```typescript
-// force=true 忽略缓存重新请求并覆盖缓存
-analyzePoetry(poetry, force?): Promise<PoetryAnalysis>
+// force=true 忽略缓存重新请求并覆盖缓存；customPrompt 为用户补充要求（提供时忽略缓存并覆盖）
+analyzePoetry(poetry, force?, customPrompt?): Promise<PoetryAnalysis>
 ```
 
 ## 安全架构

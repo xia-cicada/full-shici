@@ -14,12 +14,18 @@ class AiAssist {
 
   /**
    * 赏析诗词。结果按诗词ID缓存（诗词库不可变），同一首诗只请求一次 AI；
-   * force 为 true 时忽略缓存重新请求并覆盖缓存。
+   * force 为 true 时忽略缓存重新请求并覆盖缓存；
+   * customPrompt 为用户补充要求，重新生成时优先满足（结果同样覆盖缓存）。
    */
-  async analyzePoetry(poetry: Poetry, force = false): Promise<PoetryAnalysis> {
+  async analyzePoetry(
+    poetry: Poetry,
+    force = false,
+    customPrompt?: string
+  ): Promise<PoetryAnalysis> {
     const config = aiDB.getDefaultModelConfigRaw()
+    const extra = customPrompt?.trim() || undefined
 
-    if (!force) {
+    if (!force && !extra) {
       const cached = aiDB.getPoetryAnalysis(poetry.id, config.model)
       if (cached) return cached
     }
@@ -35,7 +41,7 @@ class AiAssist {
             role: 'system',
             content: config.systemPrompt ? config.systemPrompt : AiAssist.DEFAULT_SYS_PROMPT
           },
-          { role: 'user', content: generateAnalysisPrompt(poetry) }
+          { role: 'user', content: generateAnalysisPrompt(poetry, extra) }
         ]
       })
 

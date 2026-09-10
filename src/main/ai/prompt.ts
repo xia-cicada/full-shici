@@ -1,6 +1,9 @@
 import { Poetry } from '../poetry/types'
 
-export function generateAnalysisPrompt(request: Poetry): string {
+/** extraRequirements 为用户自定义的补充要求，会附加在提示词末尾 */
+export function generateAnalysisPrompt(request: Poetry, extraRequirements?: string): string {
+  const extra = extraRequirements?.trim()
+
   return `
   请为以下古诗提供注释和赏析，要求：
   1. 注释包含高中生水平的词汇解释，并且简繁体和内容里的保持一致
@@ -12,7 +15,7 @@ export function generateAnalysisPrompt(request: Poetry): string {
   作者：${request.author}
   内容：
   ${request.paragraphs.join('\n')}
-
+  ${extra ? `\n  补充要求（用户提出，优先满足）：\n  ${extra}\n` : ''}
   请按照以下JSON结构返回：
   {
     "title": "诗歌标题",

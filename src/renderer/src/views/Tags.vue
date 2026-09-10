@@ -69,7 +69,7 @@
           <n-flex align="center" justify="space-between">
             <span v-if="selectedTag">标签「{{ selectedTag.name }}」下的诗词</span>
             <span v-else>请选择一个标签</span>
-            <n-text v-if="selectedTag" depth="3">共 {{ poetryList.length }} 首</n-text>
+            <n-text v-if="selectedTag" depth="3">共 {{ tagPoetryTotal }} 首</n-text>
           </n-flex>
         </template>
 
@@ -140,6 +140,7 @@ const interactionStore = useInteractionStore()
 const tags = computed(() => interactionStore.tags)
 const selectedTag = ref<Tag | null>(null)
 const poetryList = ref<PoetryRow[]>([])
+const tagPoetryTotal = ref(0)
 const loadingPoetries = ref(false)
 
 // 标签诗词数量统计
@@ -219,12 +220,13 @@ const selectTag = async (tag: Tag) => {
   await loadTagPoetries(tag.id)
 }
 
-// 加载标签下的诗词
+// 加载标签下的诗词（主进程在标签 ID 集合内一次完成查询）
 const loadTagPoetries = async (tagId: number) => {
   loadingPoetries.value = true
   try {
-    const poetries = await interactionStore.getPoetriesByTag(tagId)
-    poetryList.value = poetries as PoetryRow[]
+    const { results, total } = await interactionStore.searchTaggedPoetry(tagId)
+    poetryList.value = results as PoetryRow[]
+    tagPoetryTotal.value = total
   } catch (error) {
     console.error('加载诗词失败:', error)
     message.error('加载诗词失败')
@@ -233,14 +235,14 @@ const loadTagPoetries = async (tagId: number) => {
   }
 }
 
-// 加载标签诗词数量统计
+// 加载标签诗词数量统计（单条 GROUP BY 查询）
 const loadTagPoetryCount = async () => {
-  const counts = new Map<number, number>()
-  for (const tag of tags.value) {
-    const poetries = await interactionStore.getPoetriesByTag(tag.id)
-    counts.set(tag.id, poetries.length)
+  try {
+    const counts = await window.electronAPI.interaction.getTagPoetryCounts()
+    tagPoetryCount.value = new Map(counts.map((c) => [c.tagId, c.count]))
+  } catch (error) {
+    console.error('加载标签统计失败:', error)
   }
-  tagPoetryCount.value = counts
 }
 
 // 创建标签
@@ -299,6 +301,7 @@ const handleDeleteTag = (tagId: number) => {
       if (selectedTag.value?.id === tagId) {
         selectedTag.value = null
         poetryList.value = []
+        tagPoetryTotal.value = 0
       }
 
       await loadTagPoetryCount()

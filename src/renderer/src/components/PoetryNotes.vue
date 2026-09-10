@@ -196,7 +196,7 @@ const handleSubmit = async () => {
     } else {
       // 新增
       await window.electronAPI.interaction.addNote({
-        poetry_id: props.poetryId,
+        poetryId: props.poetryId,
         title: formData.value.title,
         content: formData.value.content
       })

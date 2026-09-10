@@ -1,14 +1,11 @@
 import { ModelConfig } from '../main/ai/types'
-import {
-  Category,
-  Poetry,
-  SearchOptions,
-  PaginatedSearchResult,
-  PoetryAnalysis
-} from '../main/poetry/types'
-import { Annotation, Bookmark, Note, Tag } from '../main/interaction/types'
+import { Category, Poetry, SearchOptions, PaginatedSearchResult, PoetryAnalysis } from '../main/poetry/types'
+import { Annotation, Bookmark, Note, Tag, AnnotationInput, BookmarkInput, NoteInput } from '../main/interaction/types'
 
 export interface PoetryDBAPI {
+  // 数据库状态（诗词库文件是否存在，用于缺库引导）
+  getStatus: () => Promise<{ ready: boolean; dbPath: string }>
+
   // 分类相关
   getAllCategories: () => Promise<Category[]>
   getCategoryById: (id: number) => Promise<Category | null>
@@ -19,11 +16,12 @@ export interface PoetryDBAPI {
   getPoetryById: (id: number) => Promise<Poetry | null>
   getRandomPoetry: (count?: number) => Promise<Poetry[]>
 
-  // 搜索相关
+  // 搜索相关（关键词传原文即可，主进程内部会做拼音转换与转义）
   searchPoetry: (
     keyword: string,
     options: {
       categoryId?: number
+      page?: number
       limit?: number
     }
   ) => Promise<PaginatedSearchResult>
@@ -37,7 +35,7 @@ export interface PoetryDBAPI {
 }
 
 export interface AIAPI {
-  analyzePoetry: (poetry: Poetry) => Promise<PoetryAnalysis | null>
+  analyzePoetry: (poetry: Poetry, force?: boolean) => Promise<PoetryAnalysis>
   addModelConfig: (config: ModelConfig) => Promise<ModelConfig>
   updateModelConfig: (id: number, config: Partial<ModelConfig>) => Promise<ModelConfig | null>
   getAllModelConfigs: () => Promise<ModelConfig[]>
@@ -49,17 +47,17 @@ export interface AIAPI {
 
 export interface InteractionAPI {
   // ========== 注解相关API ==========
-  addAnnotation: (params: Omit<Annotation, 'id' | 'created_at' | 'updated_at'>) => Promise<number>
+  addAnnotation: (params: AnnotationInput) => Promise<number>
   getAnnotationsByPoetry: (poetryId: number) => Promise<Annotation[]>
   getAnnotationsByVerse: (params: {
-    poetry_id: number
-    verse_index: number
+    poetryId: number
+    verseIndex: number
   }) => Promise<Annotation[]>
   updateAnnotation: (params: Pick<Annotation, 'id' | 'content'>) => Promise<void>
   deleteAnnotation: (id: number) => Promise<void>
 
   // ========== 笔记相关API ==========
-  addNote: (params: Omit<Note, 'id' | 'created_at' | 'updated_at'>) => Promise<number>
+  addNote: (params: NoteInput) => Promise<number>
   getNotesByPoetry: (poetryId: number) => Promise<Note[]>
   getNotesSummaryByPoetry: (
     poetryId: number
@@ -69,10 +67,16 @@ export interface InteractionAPI {
   deleteNote: (id: number) => Promise<void>
 
   // ========== 标记相关API ==========
-  setBookmark: (params: Omit<Bookmark, 'id' | 'created_at'>) => Promise<void>
+  setBookmark: (params: BookmarkInput) => Promise<void>
   getBookmark: (params: { poetryId: number; type: string }) => Promise<Bookmark | null>
   getAllBookmarks: (type?: string) => Promise<Bookmark[]>
   removeBookmark: (params: { poetryId: number; type: string }) => Promise<void>
+  /**批量查询给定诗词中已收藏的ID（默认收藏类型） */
+  filterBookmarkedIds: (poetryIds: number[], type?: string) => Promise<number[]>
+  /**在收藏集合内搜索/分页诗词（单次 IPC 完成过滤+分页） */
+  searchBookmarkedPoetry: (
+    options?: { keyword?: string; categoryId?: number; page?: number; limit?: number }
+  ) => Promise<PaginatedSearchResult>
 
   // ========== 标签相关API ==========
   createTag: (params: Omit<Tag, 'id' | 'created_at' | 'updated_at'>) => Promise<Tag>
@@ -83,6 +87,14 @@ export interface InteractionAPI {
   getTagsByPoetry: (poetryId: number) => Promise<Tag[]>
   getPoetriesByTag: (tagId: number) => Promise<number[]>
   removeTagFromPoetry: (params: { poetryId: number; tagId: number }) => Promise<void>
+  /**统计各标签下的诗词数量 */
+  getTagPoetryCounts: (
+    tagIds?: number[]
+  ) => Promise<Array<{ tagId: number; count: number }>>
+  /**在标签集合内搜索/分页诗词（单次 IPC 完成过滤+分页） */
+  searchTaggedPoetry: (
+    options: { tagId: number; keyword?: string; categoryId?: number; page?: number; limit?: number }
+  ) => Promise<PaginatedSearchResult>
 }
 
 export interface ExposedApi {
@@ -90,6 +102,7 @@ export interface ExposedApi {
   minimize: () => Promise<void>
   toggleMaximize: () => Promise<void>
   close: () => Promise<void>
+  relaunch: () => Promise<void>
   onMaximized: (fn: () => void) => void
   onUnmaximized: (fn: () => void) => void
 

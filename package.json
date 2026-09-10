@@ -21,12 +21,11 @@
     "rebuild:sqlite3": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
-    "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "better-sqlite3": "^12.6.2",
     "electron-log": "^5.4.3",
-    "electron-updater": "^6.7.3",
-    "openai": "^6.16.0"
+    "openai": "^6.16.0",
+    "pinyin-pro": "^3.28.0"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^2.0.0",
@@ -43,7 +42,6 @@
     "es-toolkit": "^1.44.0",
     "naive-ui": "^2.43.2",
     "pinia": "^3.0.4",
-    "pinyin-pro": "^3.28.0",
     "prettier": "^3.8.1",
     "sass": "^1.97.3",
     "typescript": "^5.9.3",

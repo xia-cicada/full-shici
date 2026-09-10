@@ -12,7 +12,7 @@
 
     <!-- 内容区 -->
     <n-layout-content position="absolute" content-class="flex flex-col" style="top: 50px">
-      <div class="grid grid-cols-2 gap-6 pb-6 overflow-hidden">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 overflow-hidden">
         <n-card v-if="loading" class="mb-6">
           <n-skeleton height="30px" width="60%" class="mb-4" />
           <n-skeleton text style="width: 100%" />
@@ -58,7 +58,7 @@
                     </n-button>
                   </template>
                   <div>
-                    {{ notesSummaty?.latestContent || '无' }}
+                    {{ notesSummary?.latestContent || '无' }}
                   </div>
                 </n-card>
                 <n-card :hoverable="true" title="标签">
@@ -102,7 +102,7 @@ import type { Poetry } from '@main/poetry/types'
 const router = useRouter()
 const message = useMessage()
 const poetry = ref<Poetry | null>(null)
-const notesSummaty = ref<{ latestContent: string | null; totalCount: number }>()
+const notesSummary = ref<{ latestContent: string | null; totalCount: number }>()
 const loading = ref(true)
 
 // 从路由获取ID
@@ -115,7 +115,7 @@ function handleMoreNotes() {
 
 async function loadNotesSummary() {
   const summary = await window.electronAPI.interaction.getNotesSummaryByPoetry(Number(id))
-  notesSummaty.value = summary
+  notesSummary.value = summary
 }
 
 onMounted(async () => {

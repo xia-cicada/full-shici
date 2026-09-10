@@ -16,7 +16,7 @@
         placeholder="搜索收藏的诗词"
         clearable
         style="width: 300px"
-        @input="filterFavorites"
+        @input="onKeywordInput"
       >
         <template #prefix>
           <div class="i-tabler-search" />
@@ -33,7 +33,7 @@
 
     <!-- 收藏列表 -->
     <n-spin :show="isLoading" content-class="h-full box-border overflow-hidden p-3">
-      <n-empty v-if="!isLoading && filteredPoetries.length === 0" description="没有找到匹配的诗词">
+      <n-empty v-if="!isLoading && filteredTotal === 0" description="没有找到匹配的诗词">
         <template #extra>
           <n-button v-if="searchKeyword || selectedCategory" @click="resetFilter">
             清空筛选
@@ -70,7 +70,6 @@
 <script setup lang="ts">
 import { DataTableColumns, NButton, NTag } from 'naive-ui'
 import BookmarkButton from '@/components/BookmarkButton.vue'
-import type { Poetry } from '@main/poetry/types'
 
 interface PoetryRow {
   id: number
@@ -82,12 +81,16 @@ interface PoetryRow {
   category_id: number
 }
 
+interface Category {
+  id: number
+  name: string
+}
+
 const router = useRouter()
 const message = useMessage()
 
-const allPoetries = ref<PoetryRow[]>([])
-const filteredPoetries = ref<PoetryRow[]>([])
 const poetryList = ref<PoetryRow[]>([])
+const categories = ref<Category[]>([])
 const searchKeyword = ref('')
 const selectedCategory = ref<number | null>(null)
 const currentPage = ref(1)
@@ -96,15 +99,9 @@ const filteredTotal = ref(0)
 const isLoading = ref(false)
 
 // 分类选项
-const categoryOptions = computed(() => {
-  const categories = new Map<number, string>()
-  allPoetries.value.forEach((p) => {
-    if (!categories.has(p.category_id)) {
-      categories.set(p.category_id, p.category_name)
-    }
-  })
-  return Array.from(categories.entries()).map(([value, label]) => ({ label, value }))
-})
+const categoryOptions = computed(() =>
+  categories.value.map((c) => ({ label: c.name, value: c.id }))
+)
 
 // 表头配置
 const columns: DataTableColumns<PoetryRow> = [
@@ -163,77 +160,55 @@ const columns: DataTableColumns<PoetryRow> = [
   }
 ]
 
-// 加载收藏列表
+// 加载收藏列表：过滤与分页由主进程在收藏 ID 集合内完成
 const loadFavorites = async () => {
   try {
     isLoading.value = true
 
-    // 获取所有收藏的书签
-    const bookmarks = await window.electronAPI.interaction.getAllBookmarks('favorite')
+    const { results, total } = await window.electronAPI.interaction.searchBookmarkedPoetry({
+      keyword: searchKeyword.value || undefined,
+      categoryId: selectedCategory.value || undefined,
+      page: currentPage.value,
+      limit: pageSize.value
+    })
 
-    // 获取诗词详情
-    const poetries = await Promise.all(
-      bookmarks.map((bookmark) => window.electronAPI.db.getPoetryById(bookmark.poetry_id))
-    )
-
-    allPoetries.value = poetries.filter((p) => p !== null) as PoetryRow[]
-    filterFavorites()
+    poetryList.value = results as PoetryRow[]
+    filteredTotal.value = total
   } catch (error) {
     console.error('加载收藏列表失败:', error)
     message.error('加载收藏列表失败')
+    poetryList.value = []
+    filteredTotal.value = 0
   } finally {
     isLoading.value = false
   }
 }
 
-// 筛选收藏列表
-const filterFavorites = () => {
-  let filtered = [...allPoetries.value]
-
-  // 应用分类筛选
-  if (selectedCategory.value) {
-    filtered = filtered.filter((p) => p.category_id === selectedCategory.value)
-  }
-
-  // 应用关键词筛选
-  if (searchKeyword.value.trim()) {
-    const keyword = searchKeyword.value.toLowerCase()
-    filtered = filtered.filter(
-      (p) =>
-        p.title.toLowerCase().includes(keyword) ||
-        p.author.toLowerCase().includes(keyword) ||
-        (p.rhythmic && p.rhythmic.toLowerCase().includes(keyword)) ||
-        p.paragraphs.some((para) => para.toLowerCase().includes(keyword))
-    )
-  }
-
-  filteredPoetries.value = filtered
-  filteredTotal.value = filtered.length
-
-  // 重置到第一页并更新显示
+// 输入关键词后回到第一页重新查询
+const onKeywordInput = () => {
   currentPage.value = 1
-  updatePage()
+  loadFavorites()
 }
 
-// 更新当前页数据
-const updatePage = () => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  poetryList.value = filteredPoetries.value.slice(start, end)
+// 更新当前页
+const updatePage = (page: number) => {
+  currentPage.value = page
+  loadFavorites()
 }
 
 // 更新页大小
 const updatePageSize = (size: number) => {
   pageSize.value = size
   currentPage.value = 1
-  updatePage()
+  loadFavorites()
 }
 
 // 重置筛选
 const resetFilter = () => {
   searchKeyword.value = ''
   selectedCategory.value = null
-  filterFavorites()
+  currentPage.value = 1
+  loadFavorites()
 }
 
 // 查看详情
@@ -243,11 +218,16 @@ const viewDetail = (id: number) => {
 
 // 监听分类选择变化
 watch(selectedCategory, () => {
-  filterFavorites()
+  currentPage.value = 1
+  loadFavorites()
 })
 
 // 初始化加载
 onMounted(() => {
+  window.electronAPI.db
+    .getAllCategories()
+    .then((list) => (categories.value = list))
+    .catch((error) => console.error('加载分类失败:', error))
   loadFavorites()
 })
 </script>

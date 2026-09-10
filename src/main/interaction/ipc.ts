@@ -1,15 +1,48 @@
 import { ipcMain } from 'electron'
 import { interactionDB } from './db'
-import { Annotation, Bookmark, Note, Tag } from './types'
+import { poetryDB } from '../poetry/db'
+import { Annotation, AnnotationInput, BookmarkInput, Note, NoteInput, Tag } from './types'
+
+/**收藏/标签视图共用的查询条件 */
+interface PoetryListOptions {
+  keyword?: string
+  categoryId?: number
+  page?: number
+  limit?: number
+}
 
 export function setupInteractionDatabaseIPC() {
-  // ========== 注解相关IPC ==========
+  // ========== 收藏/标签视图的跨库组合查询 ==========
+  // 诗词库与用户库是两个独立 sqlite 文件，无法 SQL JOIN：
+  // 先在用户库取 ID 集合，再让诗词库在 ID 集合内完成过滤/搜索/分页（各一次 IPC）
+
+  ipcMain.handle('interaction-search-bookmarked-poetry', (_, options: PoetryListOptions = {}) => {
+    const ids = interactionDB.getBookmarkPoetryIds('favorite')
+    return poetryDB.searchPoetry(options.keyword ?? '', { ...options, ids })
+  })
+
   ipcMain.handle(
-    'interaction-add-annotation',
-    (_, params: Omit<Annotation, 'id' | 'created_at' | 'updated_at'>) => {
-      return interactionDB.addAnnotation(params)
+    'interaction-search-tagged-poetry',
+    (_, options: PoetryListOptions & { tagId: number }) => {
+      const { tagId, ...listOptions } = options
+      const ids = interactionDB.getPoetriesByTag(tagId)
+      return poetryDB.searchPoetry(listOptions.keyword ?? '', { ...listOptions, ids })
     }
   )
+
+  ipcMain.handle('interaction-filter-bookmarked-ids', (_, poetryIds: number[], type?: string) => {
+    return interactionDB.filterBookmarkedIds(poetryIds, type || 'favorite')
+  })
+
+  ipcMain.handle('interaction-get-tag-poetry-counts', (_, tagIds?: number[]) => {
+    const rows = interactionDB.getTagPoetryCounts(tagIds)
+    return rows.map((r) => ({ tagId: r.tag_id, count: r.count }))
+  })
+
+  // ========== 注解相关IPC ==========
+  ipcMain.handle('interaction-add-annotation', (_, params: AnnotationInput) => {
+    return interactionDB.addAnnotation(params)
+  })
 
   ipcMain.handle('interaction-get-annotations-by-poetry', (_, poetryId: number) => {
     return interactionDB.getAnnotationsByPoetry(poetryId)
@@ -17,8 +50,8 @@ export function setupInteractionDatabaseIPC() {
 
   ipcMain.handle(
     'interaction-get-annotations-by-verse',
-    (_, params: Pick<Annotation, 'poetry_id' | 'verse_index'>) => {
-      return interactionDB.getAnnotationsByVerse(params)
+    (_, params: { poetryId: number; verseIndex: number }) => {
+      return interactionDB.getAnnotationsByVerse(params.poetryId, params.verseIndex)
     }
   )
 
@@ -34,12 +67,9 @@ export function setupInteractionDatabaseIPC() {
   })
 
   // ========== 笔记相关IPC ==========
-  ipcMain.handle(
-    'interaction-add-note',
-    (_, params: Omit<Note, 'id' | 'created_at' | 'updated_at'>) => {
-      return interactionDB.addNote(params)
-    }
-  )
+  ipcMain.handle('interaction-add-note', (_, params: NoteInput) => {
+    return interactionDB.addNote(params)
+  })
 
   ipcMain.handle('interaction-get-notes-by-poetry', (_, poetryId: number) => {
     return interactionDB.getNotesByPoetry(poetryId)
@@ -62,7 +92,7 @@ export function setupInteractionDatabaseIPC() {
   })
 
   // ========== 标记相关IPC ==========
-  ipcMain.handle('interaction-set-bookmark', (_, params: Omit<Bookmark, 'id' | 'created_at'>) => {
+  ipcMain.handle('interaction-set-bookmark', (_, params: BookmarkInput) => {
     return interactionDB.setBookmark(params)
   })
 

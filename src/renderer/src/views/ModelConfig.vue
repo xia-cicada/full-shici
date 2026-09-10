@@ -106,6 +106,11 @@ const editConfig = (config: ModelConfig) => {
 // 保存配置
 const saveConfig = async () => {
   const rawConfig = toDeepRaw(currentConfig.value)
+  // 新增时 API Key 必填；编辑时留空表示保留原 Key（主进程处理）
+  if (!isEditing.value && !rawConfig.apiKey) {
+    message.warning('请先填写 API Key')
+    return
+  }
   try {
     if (isEditing.value && rawConfig.id) {
       await window.electronAPI.ai.updateModelConfig(rawConfig.id, rawConfig)
@@ -183,10 +188,10 @@ const goBack = () => {
               <NInput v-model:value="currentConfig.model" placeholder="配置模型名称" />
             </NFormItem>
 
-            <NFormItem label="API Key" required>
+            <NFormItem label="API Key" :required="!isEditing">
               <NInput
                 v-model:value="currentConfig.apiKey"
-                placeholder="输入API Key"
+                :placeholder="isEditing ? '留空则保留原 API Key' : '输入API Key'"
                 type="password"
                 show-password-on="click"
               />

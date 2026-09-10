@@ -5,8 +5,11 @@ import { aiDB } from './db'
 import { ModelConfig } from './types'
 
 export function setupAIIPC() {
-  ipcMain.handle('ai-analyze-poetry', (_event, poetry: Poetry) => {
-    return aiAssist.analyzePoetry(poetry)
+  // 应用就绪后把历史明文 API Key 迁移为 safeStorage 加密存储
+  aiDB.migratePlaintextApiKeys()
+
+  ipcMain.handle('ai-analyze-poetry', (_event, poetry: Poetry, force?: boolean) => {
+    return aiAssist.analyzePoetry(poetry, !!force)
   })
 
   // 模型配置

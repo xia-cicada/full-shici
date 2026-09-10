@@ -9,6 +9,17 @@
     >
       <!-- 诗歌基本信息 -->
       <n-card :bordered="false" content-style="padding: 0 0.7rem;">
+        <div class="flex justify-end">
+          <n-tooltip trigger="hover">
+            <template #trigger>
+              <n-button size="tiny" quaternary :disabled="loading" @click="loadAnalysis(true)">
+                <i class="i-tabler-refresh"></i>
+              </n-button>
+            </template>
+            重新赏析（忽略缓存）
+          </n-tooltip>
+        </div>
+
         <!-- 赏析结果展示区 -->
         <div class="flex flex-col gap-2" v-if="analysisResult">
           <n-card name="vocabulary" title="词汇注释" hoverable>
@@ -73,10 +84,13 @@ const handleConfigModel = () => {
 
 let cleanHighlight: Function
 const vocabularyNotes = ref<VocabularyNote[]>([])
-onMounted(async () => {
+
+const loadAnalysis = async (force = false) => {
   try {
+    loading.value = true
+    error.value = ''
     cleanHighlight?.()
-    const result = await window.electronAPI.ai.analyzePoetry(toDeepRaw(props.poetry))
+    const result = await window.electronAPI.ai.analyzePoetry(toDeepRaw(props.poetry), force)
 
     analysisResult.value = result
     const notes = (props.poetry.notes || []).map((d) => parsePoetryNote(d))
@@ -94,7 +108,9 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(() => loadAnalysis())
 </script>
 
 <style lang="scss"></style>

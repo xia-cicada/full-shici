@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { getPy } from '@/utils'
 import { DataTableColumns, NButton, NTag } from 'naive-ui'
 import { useInteractionStore } from '@/stores/interaction'
 import BookmarkButton from '@/components/BookmarkButton.vue'
@@ -68,7 +67,8 @@ const columns: DataTableColumns<PoetryRow> = [
     width: 200,
     ellipsis: {
       tooltip: false
-    }
+    },
+    render: (row) => row.paragraphs.join(' ')
   },
   {
     title: '操作',
@@ -114,141 +114,34 @@ const searchPoetry = async (toResetPage = false) => {
     if (toResetPage) currentPage.value = 1
     isLoading.value = true
 
-    // 如果选择了只看收藏，则按收藏查询
-    if (showFavoritesOnly.value) {
-      await searchByFavorites()
-      return
-    }
-
-    // 如果选择了标签，则按标签查询
-    if (selectedTag.value) {
-      await searchByTag()
-      return
-    }
-
-    const options = {
-      keyword: searchKeyword.value,
+    const listOptions = {
+      keyword: searchKeyword.value || undefined,
       categoryId: selectedCategory.value || undefined,
       page: currentPage.value,
       limit: pageSize.value
     }
 
-    // 由于诗词简繁体都有并且不好区分，因此查询关键字使用拼音做适配
-    const { results, total } = await window.electronAPI.db.searchPoetry(
-      getPy(options.keyword),
-      options
-    )
+    // 收藏/标签视图由主进程在对应 ID 集合内完成过滤与分页，各一次 IPC
+    let result
+    if (showFavoritesOnly.value) {
+      result = await window.electronAPI.interaction.searchBookmarkedPoetry(listOptions)
+    } else if (selectedTag.value) {
+      result = await interactionStore.searchTaggedPoetry(selectedTag.value, listOptions)
+    } else {
+      // 关键词传原文即可：主进程内部会做拼音转换/转义，未命中时再按中文原文搜正文
+      result = await window.electronAPI.db.searchPoetry(
+        searchKeyword.value,
+        listOptions
+      )
+    }
 
-    poetryList.value = results as PoetryRow[]
-    totalItems.value = total as number
+    poetryList.value = result.results
+    totalItems.value = result.total
 
     // 加载收藏状态
     await loadBookmarkStatus()
   } catch (error) {
     console.error('搜索失败:', error)
-    poetryList.value = []
-    totalItems.value = 0
-  } finally {
-    isLoading.value = false
-  }
-}
-
-// 按收藏搜索诗词
-const searchByFavorites = async () => {
-  try {
-    isLoading.value = true
-
-    // 获取所有收藏的诗词ID
-    const bookmarks = await window.electronAPI.interaction.getAllBookmarks('favorite')
-    const favoriteIds = bookmarks.map((b) => b.poetry_id)
-
-    if (favoriteIds.length === 0) {
-      poetryList.value = []
-      totalItems.value = 0
-      return
-    }
-
-    // 批量查询诗词详情
-    const allPoetries = await Promise.all(
-      favoriteIds.map((id) => window.electronAPI.db.getPoetryById(id))
-    )
-
-    // 过滤掉 null 结果
-    let filteredPoetries = allPoetries.filter((p) => p !== null) as PoetryRow[]
-
-    // 应用分类过滤
-    if (selectedCategory.value) {
-      filteredPoetries = filteredPoetries.filter((p) => p.category_id === selectedCategory.value)
-    }
-
-    // 应用关键词过滤
-    if (searchKeyword.value.trim()) {
-      const keyword = searchKeyword.value.toLowerCase()
-      filteredPoetries = filteredPoetries.filter(
-        (p) =>
-          p.title.toLowerCase().includes(keyword) ||
-          p.author.toLowerCase().includes(keyword) ||
-          (p.rhythmic && p.rhythmic.toLowerCase().includes(keyword)) ||
-          p.paragraphs.some((para) => para.toLowerCase().includes(keyword))
-      )
-    }
-
-    // 分页
-    totalItems.value = filteredPoetries.length
-    const start = (currentPage.value - 1) * pageSize.value
-    const end = start + pageSize.value
-    poetryList.value = filteredPoetries.slice(start, end)
-
-    // 加载收藏状态（都是已收藏的）
-    await loadBookmarkStatus()
-  } catch (error) {
-    console.error('按收藏搜索失败:', error)
-    poetryList.value = []
-    totalItems.value = 0
-  } finally {
-    isLoading.value = false
-  }
-}
-
-// 按标签搜索诗词
-const searchByTag = async () => {
-  if (!selectedTag.value) return
-
-  try {
-    isLoading.value = true
-
-    // 获取标签下的所有诗词ID
-    let poetries = await interactionStore.getPoetriesByTag(selectedTag.value)
-
-    // 应用分类过滤
-    if (selectedCategory.value) {
-      poetries = poetries.filter((p: any) => p.category_id === selectedCategory.value)
-    }
-
-    // 应用关键词过滤
-    if (searchKeyword.value.trim()) {
-      const keyword = searchKeyword.value.toLowerCase()
-      poetries = poetries.filter(
-        (p: any) =>
-          p.title.toLowerCase().includes(keyword) ||
-          p.author.toLowerCase().includes(keyword) ||
-          (p.rhythmic && p.rhythmic.toLowerCase().includes(keyword)) ||
-          p.paragraphs.some((para: string) => para.toLowerCase().includes(keyword))
-      )
-    }
-
-    // 分页
-    totalItems.value = poetries.length
-    const start = (currentPage.value - 1) * pageSize.value
-    const end = start + pageSize.value
-    const pagePoetries = poetries.slice(start, end)
-
-    poetryList.value = pagePoetries as PoetryRow[]
-
-    // 加载收藏状态
-    await loadBookmarkStatus()
-  } catch (error) {
-    console.error('按标签搜索失败:', error)
     poetryList.value = []
     totalItems.value = 0
   } finally {

@@ -1,5 +1,8 @@
 import { userData } from '../userData/db'
-import { Annotation, Bookmark, Note, Tag } from './types'
+import { Annotation, AnnotationInput, BookmarkInput, Note, NoteInput, Tag } from './types'
+
+/**单批 IN 条件的最大参数数（SQLite 变量上限的保守值） */
+const IN_CHUNK_SIZE = 500
 
 export class InteractionDB {
   private userData = userData
@@ -10,19 +13,11 @@ export class InteractionDB {
   }
 
   initTable() {
+    // 迁移脚本必须幂等（IF NOT EXISTS）。
+    // 历史实现是 DROP + 重建且依赖全局版本号防重放，一旦误执行会清空用户的笔记/收藏/标签。
     const migrationScript = `
-    -- 禁用外键检查（用于重建表）
-    PRAGMA foreign_keys = OFF;
-
-    -- 删除旧表（如果存在）
-    DROP TABLE IF EXISTS annotation;
-    DROP TABLE IF EXISTS note;
-    DROP TABLE IF EXISTS bookmark;
-    DROP TABLE IF EXISTS poetry_tag;
-    DROP TABLE IF EXISTS tag;
-
     -- 注解表（基于诗句数组定位）
-    CREATE TABLE annotation (
+    CREATE TABLE IF NOT EXISTS annotation (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       poetry_id INTEGER NOT NULL,     -- 关联的诗词ID
       verse_index INTEGER NOT NULL,   -- 第几句，第0句表示标题
@@ -34,7 +29,7 @@ export class InteractionDB {
     );
 
     -- 笔记表
-    CREATE TABLE note (
+    CREATE TABLE IF NOT EXISTS note (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       poetry_id INTEGER NOT NULL,     -- 关联的诗词ID
       title TEXT,                     -- 笔记标题
@@ -44,7 +39,7 @@ export class InteractionDB {
     );
 
     -- 标记表（收藏、点赞等）
-    CREATE TABLE bookmark (
+    CREATE TABLE IF NOT EXISTS bookmark (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       poetry_id INTEGER NOT NULL,     -- 关联的诗词ID
       type TEXT NOT NULL,             -- 标记类型（收藏，点赞等）
@@ -54,7 +49,7 @@ export class InteractionDB {
     );
 
     -- 标签表
-    CREATE TABLE tag (
+    CREATE TABLE IF NOT EXISTS tag (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,      -- 标签名称
       color TEXT,                     -- 标签颜色
@@ -63,7 +58,7 @@ export class InteractionDB {
     );
 
     -- 诗词-标签关联表
-    CREATE TABLE poetry_tag (
+    CREATE TABLE IF NOT EXISTS poetry_tag (
       poetry_id INTEGER NOT NULL,     -- 关联的诗词ID
       tag_id INTEGER NOT NULL,
       created_at TIMESTAMP NOT NULL,
@@ -72,33 +67,30 @@ export class InteractionDB {
     );
 
     -- 创建索引提高查询性能
-    CREATE INDEX idx_annotation_poetry_id ON annotation(poetry_id);
-    CREATE INDEX idx_note_poetry_id ON note(poetry_id);
-    CREATE INDEX idx_bookmark_poetry_id ON bookmark(poetry_id);
-    CREATE INDEX idx_bookmark_type ON bookmark(type);
-    CREATE INDEX idx_poetry_tag_poetry_id ON poetry_tag(poetry_id);
-    CREATE INDEX idx_poetry_tag_tag_id ON poetry_tag(tag_id);
-
-    -- 重新启用外键检查
-    PRAGMA foreign_keys = ON;
+    CREATE INDEX IF NOT EXISTS idx_annotation_poetry_id ON annotation(poetry_id);
+    CREATE INDEX IF NOT EXISTS idx_note_poetry_id ON note(poetry_id);
+    CREATE INDEX IF NOT EXISTS idx_bookmark_poetry_id ON bookmark(poetry_id);
+    CREATE INDEX IF NOT EXISTS idx_bookmark_type ON bookmark(type);
+    CREATE INDEX IF NOT EXISTS idx_poetry_tag_poetry_id ON poetry_tag(poetry_id);
+    CREATE INDEX IF NOT EXISTS idx_poetry_tag_tag_id ON poetry_tag(tag_id);
     `
 
-    this.userData.migrate(4, migrationScript)
+    this.userData.migrateNs('interaction', 1, migrationScript)
   }
 
   // ========== 注解相关方法 ==========
 
-  addAnnotation(params: Omit<Annotation, 'id' | 'created_at' | 'updated_at'>) {
+  addAnnotation(params: AnnotationInput) {
     const now = Date.now()
     const stmt = this.db.prepare(`
       INSERT INTO annotation (poetry_id, verse_index, start_pos, end_pos, content, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `)
     return stmt.run(
-      params.poetry_id,
-      params.verse_index,
-      params.start_pos,
-      params.end_pos,
+      params.poetryId,
+      params.verseIndex,
+      params.startPos,
+      params.endPos,
       params.content,
       now,
       now
@@ -114,13 +106,13 @@ export class InteractionDB {
     return stmt.all(poetryId)
   }
 
-  getAnnotationsByVerse(params: Pick<Annotation, 'poetry_id' | 'verse_index'>) {
+  getAnnotationsByVerse(poetryId: number, verseIndex: number) {
     const stmt = this.db.prepare(`
       SELECT * FROM annotation
       WHERE poetry_id = ? AND verse_index = ?
       ORDER BY start_pos
     `)
-    return stmt.all(params.poetry_id, params.verse_index)
+    return stmt.all(poetryId, verseIndex)
   }
 
   updateAnnotation(params: Pick<Annotation, 'id' | 'content'>) {
@@ -140,13 +132,13 @@ export class InteractionDB {
 
   // ========== 笔记相关方法 ==========
 
-  addNote(params: Omit<Note, 'id' | 'created_at' | 'updated_at'>) {
+  addNote(params: NoteInput) {
     const now = Date.now()
     const stmt = this.db.prepare(`
       INSERT INTO note (poetry_id, title, content, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?)
     `)
-    return stmt.run(params.poetry_id, params.title, params.content, now, now)
+    return stmt.run(params.poetryId, params.title, params.content, now, now)
   }
 
   getNotesByPoetry(poetryId: number) {
@@ -211,13 +203,13 @@ export class InteractionDB {
 
   // ========== 标记相关方法 ==========
 
-  setBookmark(params: Omit<Bookmark, 'id' | 'created_at'>) {
+  setBookmark(params: BookmarkInput) {
     const now = Date.now()
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO bookmark (poetry_id, type, data, created_at)
       VALUES (?, ?, ?, ?)
     `)
-    return stmt.run(params.poetry_id, params.type, params.data, now)
+    return stmt.run(params.poetryId, params.type, params.data, now)
   }
 
   getBookmark(poetryId: number, type: string) {
@@ -248,6 +240,29 @@ export class InteractionDB {
       WHERE poetry_id = ? AND type = ?
     `)
     return stmt.run(poetryId, type)
+  }
+
+  /**获取某类标记的全部诗词ID（只取ID列，供跨库批量查询诗词用） */
+  getBookmarkPoetryIds(type: string): number[] {
+    const rows = this.db
+      .prepare(`SELECT poetry_id FROM bookmark WHERE type = ?`)
+      .all(type) as Array<{ poetry_id: number }>
+    return rows.map((r) => r.poetry_id)
+  }
+
+  /**从给定诗词ID中筛出已标记的（单次 IN 批量查询，替代逐个查询/全表拉取） */
+  filterBookmarkedIds(poetryIds: number[], type: string): number[] {
+    if (poetryIds.length === 0) return []
+    const stmt = this.db.prepare(
+      `SELECT poetry_id FROM bookmark WHERE type = ? AND poetry_id IN (${poetryIds.map(() => '?').join(',')})`
+    )
+    const results: number[] = []
+    for (let i = 0; i < poetryIds.length; i += IN_CHUNK_SIZE) {
+      const chunk = poetryIds.slice(i, i + IN_CHUNK_SIZE)
+      const rows = stmt.all(type, ...chunk) as Array<{ poetry_id: number }>
+      results.push(...rows.map((r) => r.poetry_id))
+    }
+    return results
   }
 
   // ========== 标签相关方法 ==========
@@ -327,6 +342,24 @@ export class InteractionDB {
       WHERE poetry_id = ? AND tag_id = ?
     `)
     return stmt.run(poetryId, tagId)
+  }
+
+  /**统计各标签下的诗词数量（单条 GROUP BY 查询，替代逐标签拉取全部诗词） */
+  getTagPoetryCounts(tagIds?: number[]): Array<{ tag_id: number; count: number }> {
+    let sql = `SELECT tag_id, COUNT(*) as count FROM poetry_tag`
+    const params: number[] = []
+
+    if (tagIds && tagIds.length > 0) {
+      const conditions: string[] = []
+      for (let i = 0; i < tagIds.length; i += IN_CHUNK_SIZE) {
+        conditions.push(`tag_id IN (${tagIds.slice(i, i + IN_CHUNK_SIZE).map(() => '?').join(',')})`)
+        params.push(...tagIds.slice(i, i + IN_CHUNK_SIZE))
+      }
+      sql += ` WHERE ${conditions.join(' OR ')}`
+    }
+
+    sql += ` GROUP BY tag_id`
+    return this.db.prepare(sql).all(...params) as Array<{ tag_id: number; count: number }>
   }
 }
 

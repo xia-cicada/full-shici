@@ -3,6 +3,11 @@ import { poetryDB } from './db'
 import { Poetry, SearchOptions } from './types'
 
 export function setupPoetryDatabaseIPC() {
+  // 数据库状态（供渲染层在缺库时展示引导）
+  ipcMain.handle('db-get-status', () => {
+    return poetryDB.status()
+  })
+
   // 分类相关
   ipcMain.handle('db-get-all-categories', () => {
     return poetryDB.getAllCategories()

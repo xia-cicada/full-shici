@@ -29,12 +29,17 @@ export interface Poetry {
   category_name?: string
 }
 
-export type SearchResult = Poetry & {
-  relevance?: number // bm25 相关性评分
+/**列表/搜索场景的摘要字段：不取 notes/tags/extra_info 等大 JSON 列，减少传输与解析开销 */
+export type PoetrySummary = Pick<
+  Poetry,
+  'id' | 'category_id' | 'title' | 'rhythmic' | 'author' | 'paragraphs'
+> & {
+  category_name?: string
+  relevance?: number // bm25 相关性评分（FTS 搜索时有值）
 }
 
 export interface PaginatedSearchResult {
-  results: SearchResult[]
+  results: PoetrySummary[]
   total: number
 }
 

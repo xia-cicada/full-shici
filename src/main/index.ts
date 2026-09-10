@@ -6,19 +6,15 @@ import { setupPoetryDatabaseIPC } from './poetry/ipc'
 import { poetryDB } from './poetry/db'
 import { setupAIIPC } from './ai/ipc'
 import { setupInteractionDatabaseIPC } from './interaction/ipc'
+import { userData } from './userData/db'
 
-enum WINDOW_TYPE {
-  'desktop',
-  'mobile'
-}
+let mainWindow: BrowserWindow | null = null
 
-let desktopWindow: BrowserWindow
-function createWindow(type: WINDOW_TYPE): BrowserWindow {
+function createWindow(): BrowserWindow {
   // Create the browser window.
-  const isDesktop = type === WINDOW_TYPE.desktop
-  const mainWindow = new BrowserWindow({
-    width: isDesktop ? 1000 : 1000, // 之后适配移动端样式
-    height: isDesktop ? 800 : 800,
+  const win = new BrowserWindow({
+    width: 1000,
+    height: 800,
     show: false,
     autoHideMenuBar: true,
     frame: false,
@@ -30,103 +26,119 @@ function createWindow(type: WINDOW_TYPE): BrowserWindow {
     }
   })
 
-  mainWindow.on('ready-to-show', () => {
-    console.log('ready to show', type)
-    mainWindow.show()
+  win.on('ready-to-show', () => {
+    win.show()
   })
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
+  win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
 
   // 通知渲染进程窗口状态变化
-  mainWindow.on('maximize', () => {
-    mainWindow.webContents.send('window-maximized')
+  win.on('maximize', () => {
+    win.webContents.send('window-maximized')
   })
 
-  mainWindow.on('unmaximize', () => {
-    mainWindow.webContents.send('window-unmaximized')
+  win.on('unmaximize', () => {
+    win.webContents.send('window-unmaximized')
   })
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    win.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  return mainWindow
+  return win
 }
 
-/**同时创建桌面端窗口和移动端窗口，方便调试 */
-function createWindows() {
-  desktopWindow = createWindow(WINDOW_TYPE.desktop)
+function registerWindowControls() {
+  // 窗口操作作用于当前聚焦窗口；无聚焦窗口时回退到主窗口
+  const getTargetWindow = () => BrowserWindow.getFocusedWindow() ?? mainWindow
 
-  const getActiveWindow = () => {
-    return BrowserWindow.getFocusedWindow()!
-  }
-
-  // 窗口操作
   ipcMain.handle('window-minimize', () => {
-    const activeWindow = getActiveWindow()
-    activeWindow.minimize()
+    getTargetWindow()?.minimize()
   })
 
   ipcMain.handle('window-toggle-maximize', () => {
-    const activeWindow = getActiveWindow()
-    if (activeWindow.isMaximized()) {
-      activeWindow.unmaximize()
+    const win = getTargetWindow()
+    if (!win) return
+    if (win.isMaximized()) {
+      win.unmaximize()
     } else {
-      activeWindow.maximize()
+      win.maximize()
     }
   })
 
   ipcMain.handle('window-close', () => {
-    const activeWindow = getActiveWindow()
-    activeWindow.close()
+    getTargetWindow()?.close()
+  })
+
+  // 重新启动应用（如放置好诗词数据库后使其生效）
+  ipcMain.handle('app-relaunch', () => {
+    app.relaunch()
+    app.quit()
   })
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
-  setupPoetryDatabaseIPC()
-  setupInteractionDatabaseIPC()
-  setupAIIPC()
-  // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+// 单实例锁：避免两个实例并发写用户数据库
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  // 第二个实例启动时，聚焦已有窗口
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+    }
   })
 
-  createWindows()
+  // This method will be called when Electron has finished
+  // initialization and is ready to create browser windows.
+  // Some APIs can only be used after this event occurs.
+  app.whenReady().then(() => {
+    setupPoetryDatabaseIPC()
+    setupInteractionDatabaseIPC()
+    setupAIIPC()
 
-  app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindows()
+    // Set app user model id for windows
+    electronApp.setAppUserModelId('com.lotus.fullshici')
+
+    // Default open or close DevTools by F12 in development
+    // and ignore CommandOrControl + R in production.
+    // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
+    app.on('browser-window-created', (_, window) => {
+      optimizer.watchWindowShortcuts(window)
+    })
+
+    mainWindow = createWindow()
+    registerWindowControls()
+
+    app.on('activate', function () {
+      // On macOS it's common to re-create a window in the app when the
+      // dock icon is clicked and there are no other windows open.
+      if (BrowserWindow.getAllWindows().length === 0) {
+        mainWindow = createWindow()
+      }
+    })
+  })
+
+  // Quit when all windows are closed, except on macOS. There, it's common
+  // for applications and their menu bar to stay active until the user quits
+  // explicitly with Cmd + Q.
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit()
+    }
   })
 
   app.on('before-quit', () => {
     poetryDB.close()
+    userData.close()
   })
-})
-
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
+}

@@ -4,6 +4,7 @@
  */
 import { defineStore } from 'pinia'
 import type { Tag } from '@main/interaction/types'
+import type { PaginatedSearchResult } from '@main/poetry/types'
 
 export const useInteractionStore = defineStore('interaction', () => {
   const message = window.$message
@@ -55,14 +56,12 @@ export const useInteractionStore = defineStore('interaction', () => {
       }
     }
 
-    // 批量查询未缓存的
+    // 未缓存的走一次 IN 批量查询
     if (uncachedIds.length > 0) {
       try {
-        // 获取所有收藏的诗词ID
-        const allBookmarks = await window.electronAPI.interaction.getAllBookmarks('favorite')
-        const bookmarkedIds = new Set(allBookmarks.map((b) => b.poetry_id))
-
-        // 更新缓存和结果
+        const bookmarkedIds = new Set(
+          await window.electronAPI.interaction.filterBookmarkedIds(uncachedIds, 'favorite')
+        )
         for (const id of uncachedIds) {
           const bookmarked = bookmarkedIds.has(id)
           bookmarkCache.value.set(id, bookmarked)
@@ -98,7 +97,7 @@ export const useInteractionStore = defineStore('interaction', () => {
       } else {
         // 添加收藏
         await window.electronAPI.interaction.setBookmark({
-          poetry_id: poetryId,
+          poetryId,
           type: 'favorite'
         })
         bookmarkCache.value.set(poetryId, true)
@@ -167,7 +166,7 @@ export const useInteractionStore = defineStore('interaction', () => {
       await window.electronAPI.interaction.updateTag({ id, name, color })
       const index = tags.value.findIndex((t) => t.id === id)
       if (index !== -1) {
-        tags.value[index] = { ...tags.value[index], name, color, updated_at: `${Date.now()}` }
+        tags.value[index] = { ...tags.value[index], name, color, updated_at: Date.now() }
       }
       message.success('标签更新成功')
       return true
@@ -237,24 +236,18 @@ export const useInteractionStore = defineStore('interaction', () => {
   }
 
   /**
-   * 获取标签下的诗词列表
+   * 在标签下的诗词集合内搜索/分页
    */
-  const getPoetriesByTag = async (tagId: number) => {
+  const searchTaggedPoetry = async (
+    tagId: number,
+    options: { keyword?: string; categoryId?: number; page?: number; limit?: number } = {}
+  ): Promise<PaginatedSearchResult> => {
     try {
-      // 获取诗词 ID 列表
-      const poetryIds = await window.electronAPI.interaction.getPoetriesByTag(tagId)
-
-      // 批量查询诗词详情
-      const poetries = await Promise.all(
-        poetryIds.map((id) => window.electronAPI.db.getPoetryById(id))
-      )
-
-      // 过滤掉可能为 null 的结果
-      return poetries.filter((p) => p !== null)
+      return await window.electronAPI.interaction.searchTaggedPoetry({ tagId, ...options })
     } catch (error) {
       console.error('获取标签诗词列表失败:', error)
       message.error('加载诗词列表失败')
-      return []
+      return { results: [], total: 0 }
     }
   }
 
@@ -287,7 +280,7 @@ export const useInteractionStore = defineStore('interaction', () => {
     getPoetryTags,
     addTagToPoetry,
     removeTagFromPoetry,
-    getPoetriesByTag,
+    searchTaggedPoetry,
 
     // 工具
     clearCache

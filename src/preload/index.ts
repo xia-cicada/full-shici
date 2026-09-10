@@ -7,6 +7,7 @@ const electronAPI: ExposedApi = {
   minimize: () => ipcRenderer.invoke('window-minimize'),
   toggleMaximize: () => ipcRenderer.invoke('window-toggle-maximize'),
   close: () => ipcRenderer.invoke('window-close'),
+  relaunch: () => ipcRenderer.invoke('app-relaunch'),
   onMaximized: (fn: Function) => {
     ipcRenderer.on('window-maximized', () => {
       fn()
@@ -20,6 +21,7 @@ const electronAPI: ExposedApi = {
 
   // 数据库方法
   db: {
+    getStatus: () => ipcRenderer.invoke('db-get-status'),
     getAllCategories: () => ipcRenderer.invoke('db-get-all-categories'),
     getCategoryById: (id) => ipcRenderer.invoke('db-get-category', id),
 
@@ -41,7 +43,8 @@ const electronAPI: ExposedApi = {
   },
 
   ai: {
-    analyzePoetry: (poetry) => ipcRenderer.invoke('ai-analyze-poetry', poetry),
+    analyzePoetry: (poetry, force?: boolean) =>
+      ipcRenderer.invoke('ai-analyze-poetry', poetry, force),
     addModelConfig: (config: ModelConfig) => ipcRenderer.invoke('ai-add-model-config', config),
     updateModelConfig: (id: number, config: Partial<ModelConfig>) =>
       ipcRenderer.invoke('ai-update-model-config', id, config),
@@ -76,6 +79,10 @@ const electronAPI: ExposedApi = {
     getBookmark: (params) => ipcRenderer.invoke('interaction-get-bookmark', params),
     getAllBookmarks: (type) => ipcRenderer.invoke('interaction-get-all-bookmarks', type),
     removeBookmark: (params) => ipcRenderer.invoke('interaction-remove-bookmark', params),
+    filterBookmarkedIds: (poetryIds, type) =>
+      ipcRenderer.invoke('interaction-filter-bookmarked-ids', poetryIds, type),
+    searchBookmarkedPoetry: (options) =>
+      ipcRenderer.invoke('interaction-search-bookmarked-poetry', options),
 
     // 标签相关
     createTag: (params) => ipcRenderer.invoke('interaction-create-tag', params),
@@ -86,7 +93,9 @@ const electronAPI: ExposedApi = {
     getTagsByPoetry: (poetryId) => ipcRenderer.invoke('interaction-get-tags-by-poetry', poetryId),
     getPoetriesByTag: (tagId) => ipcRenderer.invoke('interaction-get-poetries-by-tag', tagId),
     removeTagFromPoetry: (params) =>
-      ipcRenderer.invoke('interaction-remove-tag-from-poetry', params)
+      ipcRenderer.invoke('interaction-remove-tag-from-poetry', params),
+    getTagPoetryCounts: (tagIds) => ipcRenderer.invoke('interaction-get-tag-poetry-counts', tagIds),
+    searchTaggedPoetry: (options) => ipcRenderer.invoke('interaction-search-tagged-poetry', options)
   }
 }
 

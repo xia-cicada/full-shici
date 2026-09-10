@@ -12,13 +12,24 @@ class AiAssist {
 
   constructor() {}
 
-  async analyzePoetry(poetry: Poetry): Promise<PoetryAnalysis> {
+  /**
+   * 赏析诗词。结果按诗词ID缓存（诗词库不可变），同一首诗只请求一次 AI；
+   * force 为 true 时忽略缓存重新请求并覆盖缓存。
+   */
+  async analyzePoetry(poetry: Poetry, force = false): Promise<PoetryAnalysis> {
+    const config = aiDB.getDefaultModelConfigRaw()
+
+    if (!force) {
+      const cached = aiDB.getPoetryAnalysis(poetry.id)
+      if (cached) return cached
+    }
+
     const openai = await this.getOpenAI()
-    const config = aiDB.getDefaultModelConfig()
     try {
       const completion = await openai.chat.completions.create({
         model: config.model || 'deepseek-chat',
         temperature: config.temperature ?? 0.7,
+        response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
@@ -28,10 +39,13 @@ class AiAssist {
         ]
       })
 
-      return this.parseAndValidateResponse(completion)
+      const analysis = this.parseAndValidateResponse(completion)
+      aiDB.savePoetryAnalysis(poetry.id, config.model || 'deepseek-chat', analysis)
+      return analysis
     } catch (error) {
       log.error('赏析失败:', error)
-      throw new Error('诗歌赏析服务暂时不可用')
+      const reason = error instanceof Error ? error.message : String(error)
+      throw new Error(`赏析请求失败：${reason}`)
     }
   }
 
@@ -66,7 +80,7 @@ class AiAssist {
   }
 
   private async getOpenAI() {
-    const currentConfig = aiDB.getDefaultModelConfig()
+    const currentConfig = aiDB.getDefaultModelConfigRaw()
     const currentHash = JSON.stringify(currentConfig)
 
     if (AiAssist.openai && currentHash === AiAssist.lastConfigHash) {
@@ -76,7 +90,7 @@ class AiAssist {
     AiAssist.openai = new OpenAI({
       apiKey: currentConfig.apiKey,
       baseURL: currentConfig.baseURL || 'https://api.deepseek.com/v1',
-      timeout: 10_000, // 10秒超时
+      timeout: 60_000, // 长诗的生成可能较慢
       maxRetries: 1
     })
 

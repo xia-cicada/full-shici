@@ -2,6 +2,7 @@ import { existsSync } from 'fs'
 import Database from 'better-sqlite3'
 import { Category, PaginatedSearchResult, Poetry, PoetrySummary, SearchOptions } from './types'
 import { buildFtsMatchQuery, escapeLike, hasCJK } from './pinyin-search'
+import { getKeywordVariants } from './traditional'
 import poetryDBPath from '../../../resources/poetry.sqlite?asset&asarUnpack'
 
 /**列表/搜索共用的摘要列，避免取回并解析 notes/tags/extra_info 等大 JSON 列 */
@@ -14,6 +15,62 @@ const SUMMARY_COLUMNS = `
   p.paragraphs,
   c.name as category_name
 `
+
+/** 查询片段：计数 SQL + 数据 SQL + 按占位符顺序排列的参数 */
+interface QueryParts {
+  countSql: string
+  dataSql: string
+  params: any[]
+}
+
+/** 容错匹配参数：整句精确无命中时，按有序字符覆盖率找近似诗句（如通行本与全唐诗异文） */
+const FUZZY_MIN_LENGTH = 5
+const FUZZY_MIN_COVERAGE = 0.8
+const FUZZY_CANDIDATE_LIMIT = 240
+const FUZZY_PER_BIGRAM_LIMIT = 60
+/** 容错匹配时忽略的空白与常见标点 */
+const FUZZY_IGNORED_CHARS = /[\s，。！？；：、,.!?;:（）()「」《》]/
+
+/**
+ * 计算 needle 在 haystack 中的最佳有序覆盖率（窗口内 LCS / needle 长度）。
+ * 允许缺失个别字（容忍异文用字差异），但要求匹配范围紧凑
+ * （窗口不超过查询长度+2），避免字符散布在长诗中造成的误报。
+ */
+function bestOrderedCoverage(needle: string[], haystack: string): number {
+  const n = needle.length
+  const maxSpan = n + 2
+  const minWindow = Math.ceil(n * FUZZY_MIN_COVERAGE)
+  let best = 0
+
+  for (let start = 0; start < haystack.length; start++) {
+    const m = Math.min(haystack.length, start + maxSpan) - start
+    if (m < minWindow) break // 窗口只会越来越短，无法再达到阈值
+
+    let prev = new Int16Array(m + 1)
+    let cur = new Int16Array(m + 1)
+    for (let i = 1; i <= n; i++) {
+      const needleChar = needle[i - 1]
+      for (let j = 1; j <= m; j++) {
+        cur[j] =
+          needleChar === haystack[start + j - 1]
+            ? prev[j - 1] + 1
+            : prev[j] > cur[j - 1]
+              ? prev[j]
+              : cur[j - 1]
+      }
+      const swap = prev
+      prev = cur
+      cur = swap
+      cur.fill(0)
+    }
+
+    const coverage = prev[m] / n
+    if (coverage > best) best = coverage
+    if (best === 1) break
+  }
+
+  return best
+}
 
 /**古诗词的数据库基本不会变化，和用户数据库区分开来 */
 class PoetryDB {
@@ -184,7 +241,9 @@ class PoetryDB {
   /**
    * 搜索诗词（含分页）。
    * - keyword 为空走普通分页
-   * - 有关键词先走 FTS5 拼音检索，中文未命中时回退为原文子串搜索（含正文）
+   * - FTS5 拼音检索按短语匹配标题/作者/词牌（如「李白」=> "li bai"）
+   * - 关键词含中文时，额外并入正文子串匹配（自动转繁体变体，排除 FTS 已命中的行），
+   *   两类结果合并分页：先标题/作者命中（按相关度），再正文命中
    * - options.ids 提供时只在指定 id 集合内搜索（收藏/标签视图用，经临时表过滤）
    * - limit <= 0 或不传时不限制条数
    */
@@ -207,29 +266,72 @@ class PoetryDB {
       return this._getSimplePaginatedResult(options.categoryId, currentPage, limit, hasIds)
     }
 
-    // 条件搜索走FTS5全文检索（拼音分词，输入已做转义）
-    if (this.ready) {
-      const matchQuery = buildFtsMatchQuery(trimmed)
-      if (matchQuery) {
-        const ftsResult = this._getFtsPaginatedResult(
-          matchQuery,
-          options.categoryId,
-          currentPage,
-          limit,
-          hasIds
+    const matchQuery = this.ready ? buildFtsMatchQuery(trimmed) : null
+    const searchContent = hasCJK(trimmed)
+
+    if (!matchQuery) {
+      return searchContent
+        ? this._getLikeResult(trimmed, options.categoryId, currentPage, limit, hasIds)
+        : { results: [], total: 0 }
+    }
+
+    const fts = this._buildFtsQuery(matchQuery, options.categoryId, hasIds)
+    const ftsTotal = this._countRows(fts)
+
+    // 纯拼音/英文关键词只查标题、作者、词牌
+    if (!searchContent) {
+      const offset = limit > 0 ? (currentPage - 1) * limit : 0
+      return { results: this._fetchRows(fts, limit, offset), total: ftsTotal }
+    }
+
+    // 中文关键词：并入正文匹配（排除 FTS 已命中行，避免重复）
+    const like = this._buildLikeQuery(trimmed, options.categoryId, hasIds, matchQuery)
+    const likeTotal = this._countRows(like)
+    const total = ftsTotal + likeTotal
+
+    // 精确检索完全无命中时，尝试容错匹配（异文/记错个别字）
+    if (total === 0) {
+      const fuzzy = this._getFuzzyResult(trimmed, options.categoryId, currentPage, limit, hasIds)
+      if (fuzzy) return fuzzy
+    }
+
+    return {
+      results: this._mergePagedResults(fts, ftsTotal, like, likeTotal, currentPage, limit),
+      total
+    }
+  }
+
+  /** 合并 FTS 与正文两段结果的分页切片：第一段按相关度，第二段按 id 倒序 */
+  private _mergePagedResults(
+    fts: QueryParts,
+    ftsTotal: number,
+    like: QueryParts,
+    likeTotal: number,
+    page: number,
+    limit: number
+  ): PoetrySummary[] {
+    if (limit <= 0) {
+      return [...this._fetchRows(fts, 0, 0), ...this._fetchRows(like, 0, 0)]
+    }
+
+    const offset = (page - 1) * limit
+    const results: PoetrySummary[] = []
+
+    if (offset < ftsTotal) {
+      results.push(...this._fetchRows(fts, Math.min(limit, ftsTotal - offset), offset))
+    }
+
+    const remaining = limit - results.length
+    if (remaining > 0) {
+      const likeOffset = Math.max(0, offset - ftsTotal)
+      if (likeOffset < likeTotal) {
+        results.push(
+          ...this._fetchRows(like, Math.min(remaining, likeTotal - likeOffset), likeOffset)
         )
-        if (ftsResult.total > 0) {
-          return ftsResult
-        }
       }
     }
 
-    // FTS（按拼音）没有命中时，中文关键词再按原文子串兜底搜索标题/作者/词牌/正文
-    if (hasCJK(trimmed)) {
-      return this._getLikePaginatedResult(trimmed, options.categoryId, currentPage, limit, hasIds)
-    }
-
-    return { results: [], total: 0 }
+    return results
   }
 
   /**
@@ -307,76 +409,19 @@ class PoetryDB {
     }
   }
 
-  // FTS5全文检索分页（matchQuery 为已转义/分词的 MATCH 表达式）
-  private _getFtsPaginatedResult(
+  // FTS5 检索查询（matchQuery 为已转义/分词的 MATCH 表达式）
+  private _buildFtsQuery(
     matchQuery: string,
     categoryId?: number,
-    page: number = 1,
-    limit: number = 0,
     hasIds: boolean = false
-  ): PaginatedSearchResult {
-    const offset = limit > 0 ? (page - 1) * limit : 0
-
-    let baseQuery = `
+  ): QueryParts {
+    let where = `
       FROM poetry_search
       JOIN poetry p ON poetry_search.rowid = p.id
       JOIN categories c ON p.category_id = c.id
       WHERE poetry_search MATCH ?
     `
-
     const params: any[] = [matchQuery]
-    if (categoryId) {
-      baseQuery += ' AND p.category_id = ?'
-      params.push(categoryId)
-    }
-    if (hasIds) {
-      baseQuery += this._idsFilter()
-    }
-
-    // 获取总数（使用COUNT优化）
-    const countStmt = this.db.prepare(`SELECT COUNT(*) as total ${baseQuery}`)
-    const { total } = countStmt.get(...params) as { total: number }
-
-    // 获取分页数据
-    let dataQuery = `
-      SELECT
-        ${SUMMARY_COLUMNS},
-        bm25(poetry_search) as relevance
-      ${baseQuery}
-      ORDER BY relevance
-    `
-    const pageParams = [...params]
-    if (limit > 0) {
-      dataQuery += ' LIMIT ? OFFSET ?'
-      pageParams.push(limit, offset)
-    }
-
-    const rawResults = this.db.prepare(dataQuery).all(...pageParams)
-    const results = this._parseSummaryResults(rawResults)
-
-    return {
-      results,
-      total
-    }
-  }
-
-  // 中文原文子串搜索分页（FTS未命中时的兜底，可命中诗词正文）
-  private _getLikePaginatedResult(
-    keyword: string,
-    categoryId?: number,
-    page: number = 1,
-    limit: number = 0,
-    hasIds: boolean = false
-  ): PaginatedSearchResult {
-    const offset = limit > 0 ? (page - 1) * limit : 0
-    const pattern = `%${escapeLike(keyword)}%`
-    let where = `(
-      p.title LIKE ? ESCAPE '\\'
-      OR p.author LIKE ? ESCAPE '\\'
-      OR p.rhythmic LIKE ? ESCAPE '\\'
-      OR p.paragraphs LIKE ? ESCAPE '\\'
-    )`
-    const params: any[] = [pattern, pattern, pattern, pattern]
 
     if (categoryId) {
       where += ' AND p.category_id = ?'
@@ -386,29 +431,184 @@ class PoetryDB {
       where += this._idsFilter()
     }
 
-    const { total } = this.db.prepare(
-      `SELECT COUNT(*) as total FROM poetry p WHERE ${where}`
-    ).get(...params) as { total: number }
+    return {
+      countSql: `SELECT COUNT(*) as total ${where}`,
+      dataSql: `
+        SELECT
+          ${SUMMARY_COLUMNS},
+          bm25(poetry_search) as relevance
+        ${where}
+        ORDER BY relevance
+      `,
+      params
+    }
+  }
 
-    let dataQuery = `
-      SELECT ${SUMMARY_COLUMNS}
-      FROM poetry p
-      JOIN categories c ON p.category_id = c.id
-      WHERE ${where}
-      ORDER BY p.id DESC
-    `
-    const dataParams = [...params]
-    if (limit > 0) {
-      dataQuery += ' LIMIT ? OFFSET ?'
-      dataParams.push(limit, offset)
+  // 中文原文子串查询：正文以繁体为主，关键词同时按原文与繁体变体匹配。
+  // excludeMatchQuery 提供时排除 FTS 已命中的行，避免与标题/作者结果重复。
+  private _buildLikeQuery(
+    keyword: string,
+    categoryId?: number,
+    hasIds: boolean = false,
+    excludeMatchQuery?: string
+  ): QueryParts {
+    const variants = getKeywordVariants(keyword)
+    const params: any[] = []
+
+    // 注意：参数必须按占位符出现顺序推入（逐列、列内逐变体）
+    const columnClause = (column: string): string => {
+      const parts = variants.map((variant) => {
+        params.push(`%${escapeLike(variant)}%`)
+        return `${column} LIKE ? ESCAPE '\\'`
+      })
+      return `(${parts.join(' OR ')})`
     }
 
-    const rawResults = this.db.prepare(dataQuery).all(...dataParams)
+    let where = `(
+      ${columnClause('p.title')}
+      OR ${columnClause('p.author')}
+      OR ${columnClause('p.rhythmic')}
+      OR ${columnClause('p.paragraphs')}
+    )`
+
+    if (excludeMatchQuery) {
+      where += ` AND p.id NOT IN (SELECT rowid FROM poetry_search WHERE poetry_search MATCH ?)`
+      params.push(excludeMatchQuery)
+    }
+    if (categoryId) {
+      where += ' AND p.category_id = ?'
+      params.push(categoryId)
+    }
+    if (hasIds) {
+      where += this._idsFilter()
+    }
 
     return {
-      results: this._parseSummaryResults(rawResults),
+      countSql: `SELECT COUNT(*) as total FROM poetry p WHERE ${where}`,
+      dataSql: `
+        SELECT ${SUMMARY_COLUMNS}
+        FROM poetry p
+        JOIN categories c ON p.category_id = c.id
+        WHERE ${where}
+        ORDER BY p.id DESC
+      `,
+      params
+    }
+  }
+
+  /** 单独走正文子串搜索（关键词无法转拼音时） */
+  private _getLikeResult(
+    keyword: string,
+    categoryId: number | undefined,
+    page: number,
+    limit: number,
+    hasIds: boolean
+  ): PaginatedSearchResult {
+    const query = this._buildLikeQuery(keyword, categoryId, hasIds)
+    const total = this._countRows(query)
+    if (total === 0) {
+      const fuzzy = this._getFuzzyResult(keyword, categoryId, page, limit, hasIds)
+      if (fuzzy) return fuzzy
+    }
+    const offset = limit > 0 ? (page - 1) * limit : 0
+    return {
+      results: this._fetchRows(query, limit, offset),
       total
     }
+  }
+
+  /**
+   * 容错匹配：整句精确无命中时，用各变体的首/中/尾双字片段取候选，
+   * 再按有序覆盖率评分（窗口内 LCS，默认至少 4/5 命中）。
+   * 候选与评分都遍历全部简繁/异体变体，以容忍「床/牀」这类用字差异。
+   */
+  private _getFuzzyResult(
+    keyword: string,
+    categoryId: number | undefined,
+    page: number,
+    limit: number,
+    hasIds: boolean
+  ): PaginatedSearchResult | null {
+  const needles = getKeywordVariants(keyword)
+    .map((variant) => [...variant].filter((c) => !FUZZY_IGNORED_CHARS.test(c)))
+    .filter((chars) => chars.length >= FUZZY_MIN_LENGTH)
+  if (needles.length === 0) return null
+
+  const bigrams = new Set<string>()
+  for (const needle of needles) {
+    const mid = Math.floor((needle.length - 2) / 2)
+    bigrams.add(needle.slice(0, 2).join(''))
+    bigrams.add(needle.slice(-2).join(''))
+    if (needle.length >= 6) bigrams.add(needle.slice(mid, mid + 2).join(''))
+  }
+  const bigramList = [...bigrams].filter((b) => b.length === 2).slice(0, 6)
+
+  const matched = new Map<number, { row: any; score: number }>()
+  for (const bigram of bigramList) {
+    let where = `p.paragraphs LIKE ? ESCAPE '\\'`
+    const params: any[] = [`%${escapeLike(bigram)}%`]
+    if (categoryId) {
+      where += ' AND p.category_id = ?'
+      params.push(categoryId)
+    }
+    if (hasIds) {
+      where += this._idsFilter()
+    }
+
+    const rows = this.db
+      .prepare(
+        `
+        SELECT ${SUMMARY_COLUMNS}
+        FROM poetry p
+        JOIN categories c ON p.category_id = c.id
+        WHERE ${where}
+        LIMIT ${FUZZY_PER_BIGRAM_LIMIT}
+      `
+      )
+      .all(...params) as any[]
+
+    for (const row of rows) {
+      if (matched.has(row.id)) continue
+      const text = row.paragraphs || ''
+      let score = 0
+      for (const needle of needles) {
+        const coverage = bestOrderedCoverage(needle, text)
+        if (coverage > score) score = coverage
+        if (score === 1) break
+      }
+      if (score >= FUZZY_MIN_COVERAGE) {
+        matched.set(row.id, { row, score })
+      }
+    }
+    if (matched.size >= FUZZY_CANDIDATE_LIMIT) break
+  }
+
+  if (matched.size === 0) return null
+
+  const sorted = [...matched.values()].sort((a, b) => b.score - a.score || b.row.id - a.row.id)
+  const offset = limit > 0 ? (page - 1) * limit : 0
+  const pageRows = limit > 0 ? sorted.slice(offset, offset + limit) : sorted
+
+  return {
+    results: this._parseSummaryResults(pageRows.map((m) => m.row)),
+    total: sorted.length
+  }
+}
+
+  private _countRows(query: QueryParts): number {
+    const { total } = this.db.prepare(query.countSql).get(...query.params) as { total: number }
+    return total
+  }
+
+  private _fetchRows(query: QueryParts, limit: number, offset: number): PoetrySummary[] {
+    let sql = query.dataSql
+    const params = [...query.params]
+    if (limit > 0) {
+      sql += ' LIMIT ? OFFSET ?'
+      params.push(limit, offset)
+    }
+    const rawResults = this.db.prepare(sql).all(...params)
+    return this._parseSummaryResults(rawResults)
   }
 
   // 列表/搜索结果的公用解析：只需解析 paragraphs

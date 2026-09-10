@@ -84,8 +84,13 @@ ai_analysis     # 赏析缓存（poetry_id 主键，content 为 PoetryAnalysis J
 
 ### 搜索 API
 ```typescript
-// keyword 传中文原文，主进程内部转拼音并转义
-// FTS（标题/作者/词牌拼音）未命中且关键词含中文时，回退正文 LIKE 子串搜索
+// keyword 传中文原文。主进程搜索分三层：
+// 1) FTS5 短语匹配标题/作者/词牌拼音（如 李白 => "li bai"），连续拼音自动按音节切分；
+// 2) 关键词含中文时并入正文子串匹配：经 opencc-js 生成简繁/异体变体
+//    （诗词库正文以繁体为主，床→牀），排除 FTS 已命中行后合并分页——
+//    标题/作者命中（bm25）在前，正文命中（id 倒序）在后；
+// 3) 精确检索完全无命中时启用容错匹配（≥5 字）：双字片段取候选 + 窗口内 LCS
+//    覆盖率 ≥0.8，容忍异文与记错个别字（如「床前明月光」命中全唐诗本「牀前看月光」）。
 // options.ids 提供时仅在集合内搜索（经临时表 _search_ids）；limit<=0 表示不限条数
 searchPoetry(keyword, { ids?, categoryId?, page?, limit? }): PaginatedSearchResult
 

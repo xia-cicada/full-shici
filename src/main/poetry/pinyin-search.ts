@@ -10,8 +10,14 @@ export const hasCJK = (text: string): boolean => {
   return /[\u3400-\u4dbf\u4e00-\u9fff]/.test(text)
 }
 
-/** FTS5 中把词用双引号包裹，内部双引号翻倍，防止用户输入被当作 MATCH 语法 */
+/** FTS5 中把词用双引号包裹（含空格则为短语查询），内部双引号翻倍，防止用户输入被当作 MATCH 语法 */
 const quoteFtsTerm = (term: string): string => `"${term.replace(/"/g, '""')}"`
+
+/** 把一段文本转成拼音短语（音节间以空格分隔，FTS5 中按连续短语匹配） */
+const toPinyinPhrase = (segment: string): string | null => {
+  const terms = getPy(segment).split(/\s+/).filter(Boolean)
+  return terms.length ? terms.join(' ') : null
+}
 
 /** 汉语拼音音节表（无声调），用于把连续输入的拼音串（如 libai）切分成音节 */
 const SYLLABLES = new Set(
@@ -78,31 +84,36 @@ export function segmentPinyin(input: string, maxResults = 5): string[][] {
 
 /**
  * 把用户关键词转换成安全的 FTS5 MATCH 表达式。
- * - 逐词双引号转义，杜绝 FTS5 语法注入（原实现直接拼接会导致含 " * ( 等字符时查询报错）
- * - 中文会被转成拼音（与索引列一致）
- * - 连续输入的拼音串（如 libai）会尝试多种音节切分并 OR 组合
+ * - 按空白切成多段，段内转拼音后作为「连续短语」匹配（如 李白 => "li bai"），
+ *   比逐词 AND 精确得多，避免长句命中一堆音节碰巧齐全的长标题
+ * - 连续输入的拼音串（如 libai）额外尝试音节切分（li bai）并 OR 组合
+ * - 所有词都做双引号转义，杜绝 FTS5 语法注入
  * 返回 null 表示没有可搜索的词。
  */
 export function buildFtsMatchQuery(rawKeyword: string): string | null {
   const cleaned = rawKeyword.trim()
   if (!cleaned) return null
 
-  const py = getPy(cleaned)
-  const terms = py.split(/\s+/).filter(Boolean)
-  if (terms.length === 0) return null
+  const groups: string[] = []
+  for (const segment of cleaned.split(/\s+/).filter(Boolean)) {
+    const phrase = toPinyinPhrase(segment)
+    if (!phrase) continue
 
-  const groups = new Set<string>([terms.map(quoteFtsTerm).join(' AND ')])
-
-  // 无空格的连续拼音串，尝试按音节切分后组合匹配（索引中的拼音是按音节空格分隔的）
-  if (terms.length === 1 && /^[a-z]{2,24}$/.test(terms[0])) {
-    for (const seg of segmentPinyin(terms[0])) {
-      groups.add(seg.map(quoteFtsTerm).join(' AND '))
+    if (!phrase.includes(' ') && /^[a-z]{2,24}$/.test(phrase)) {
+      // 单个连续拼音串：整词与音节切分形式 OR 组合
+      const variants = new Set<string>([phrase])
+      for (const seg of segmentPinyin(phrase)) {
+        variants.add(seg.join(' '))
+      }
+      const list = [...variants]
+      groups.push(list.length === 1 ? quoteFtsTerm(list[0]) : `(${list.map(quoteFtsTerm).join(' OR ')})`)
+    } else {
+      groups.push(quoteFtsTerm(phrase))
     }
   }
 
-  const list = [...groups]
-  if (list.length === 1) return list[0]
-  return list.map((g) => `(${g})`).join(' OR ')
+  if (groups.length === 0) return null
+  return groups.join(' AND ')
 }
 
 /** 转义 LIKE 模式中的通配符，配合 ESCAPE '\' 使用 */

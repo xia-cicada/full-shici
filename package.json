@@ -25,6 +25,7 @@
     "better-sqlite3": "^12.6.2",
     "electron-log": "^5.4.3",
     "openai": "^6.16.0",
+    "opencc-js": "^1.4.2",
     "pinyin-pro": "^3.28.0"
   },
   "devDependencies": {
